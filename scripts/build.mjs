@@ -13,6 +13,7 @@ import {fileURLToPath} from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ENTRIES = join(ROOT, 'entries');
 const SCHEMA = 1;
+const RAW_BASE = 'https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main';
 
 const CATEGORIES = ['动手之前', '接口与注册', '客户端加载', '界面与体验', '看效果与排错'];
 const STATUSES = ['有效', '待复核', '已过期'];
@@ -133,7 +134,7 @@ const quick = [
   '',
   '<!-- 这个文件由 scripts/build.mjs 生成，不要手改。 -->',
   '',
-  `做 DSH 插件前扫一眼：${live.length} 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。`,
+  `做 DSH 插件前扫一眼：${live.length} 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件，完整地址是 ${RAW_BASE}/ 加上行尾的路径。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。`,
   '',
   ...CATEGORIES.flatMap(category => {
     const group = live.filter(entry => entry.category === category);
