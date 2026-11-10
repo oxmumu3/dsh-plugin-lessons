@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "count": 24,
+  "count": 57,
   "kinds": [
     "踩过的坑",
     "好做法"
@@ -8,8 +8,10 @@
   "categories": [
     "动手之前",
     "接口与注册",
+    "工具与提示词",
     "客户端加载",
     "界面与体验",
+    "发版与兼容",
     "看效果与排错"
   ],
   "statuses": [
@@ -113,6 +115,24 @@
       "notes": "公开文章说标准模式也装不了，和 0.2.2-rc.1 的内置说明对不上。文章没写它用的宿主版本，可能是版本不同。这条按内置说明写；你那里不一样的话，以实际为准，也欢迎来改。"
     },
     {
+      "id": "bundled-undici-global-dispatcher",
+      "title": "插件自带 undici 时，别让它占了全局 dispatcher，宿主的模型请求会跟着坏",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "待复核",
+      "host_version": "未记录",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件为了设代理或超时，依赖里带了自己的一份 undici。装上这个插件之后，宿主自己的模型请求、拉模型列表开始失败，卸掉插件就好了。",
+      "do": "undici 在被 import 的那一刻，如果全局 dispatcher 还空着，就会把自己的 Agent 装上去。之后宿主自己的 undici（版本不同）拿到的是插件那份的 Agent，认不出是自己的，也就不再装自己的，于是请求出问题。\n\n两件事：\n\n- 插件发的每个请求都显式带上自己创建的 dispatcher，不依赖全局的。\n- 不要调 `setGlobalDispatcher`。如果 import 时已经占了全局位置，照下面那个仓库的办法把它让出来。",
+      "evidence": [
+        "公开仓库：dshmarket 1.73.17 的 `src/net.ts`。注释记录了这个问题（它的 issue 861）：宿主在插件之后 import undici 时，拿到的是插件那份 undici 的 Agent，从而不再安装自己的，表现为宿主的模型请求和模型列表请求在插件加载后失败；注释里写了测量时的 Node 和两份 undici 的版本。它的处理是在 import 后把新版 undici 读取的那个全局位置清空，并让自己的每个请求都带上自建的 dispatcher。"
+      ],
+      "unverified": "这个仓库没有写明问题出现在哪个宿主版本上，这次也没有在 0.2.2-rc.1 上复现。具体要清哪个全局位置和 undici 的版本有关，照抄之前请读它的源码和注释。",
+      "notes": null
+    },
+    {
       "id": "connection-fetch-register",
       "title": "用 connection.fetch.register 开接口：先声明 connection，路径放在 /api/ 下，写明 requestBody",
       "kind": "好做法",
@@ -128,7 +148,100 @@
         "宿主代码：0.2.2-rc.1 里宿主自己注册的几条路由都是这个形状：`inject` 里有 `connection`，`path` 在 `/api/` 下，带 `methods` 和 `requestBody`（见到 `'buffered'` 和 `'streaming'` 两种取值）。",
         "经验做法：「发现好插件」内置清单。"
       ],
-      "unverified": "两点。一是内置清单原话里还有一句「不要包在 `ctx.effect()` 里」，但 0.2.2-rc.1 宿主自己的代码有三处正是包在 `ctx.effect(() => ctx.connection.fetch.register(...))` 里注册的；这句话当初为什么写没有留下记录，所以没收进做法。二是路径不放在 `/api/` 下、或者不写 `requestBody` 分别会怎样，没找到宿主对应的校验，也没实测，只知道照上面写是宿主自己在用的写法。",
+      "unverified": "两点。一是内置清单原话里还有一句「不要包在 `ctx.effect()` 里」，但 0.2.2-rc.1 宿主自己的代码有三处正是包在 `ctx.effect(() => ctx.connection.fetch.register(...))` 里注册的；这句话当初为什么写没有留下记录，所以没收进做法；社区头部插件注册路由时也都包在 `ctx.effect` 里（见 register-inside-effect）。二是路径不放在 `/api/` 下、或者不写 `requestBody` 分别会怎样，没找到宿主对应的校验，也没实测，只知道照上面写是宿主自己在用的写法。",
+      "notes": null
+    },
+    {
+      "id": "contain-file-paths",
+      "title": "接口按路径读本地文件时，把路径关在目录里：挡住 ..、点文件和指到外面的符号链接",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件有一个「按名字取文件」的接口，比如取作品、取图片、取静态资源，直接把请求里的路径拼到目录后面去读。",
+      "do": "读之前做三道检查：\n\n- 路径任何一段以 `.` 开头就拒绝（挡住 `..` 和点文件）。\n- 拼好之后确认还在目录里面。\n- 对目录和文件都取真实路径（`realpath`）再比一次，挡住指到目录外面的符号链接。\n\n文件名形式固定的，直接用一个严格的正则限制文件名更省事。",
+      "evidence": [
+        "公开仓库：dsh-guizang-design 0.1.4 的 `lib/index.js` 里有一个专门的函数做这三道检查，注释写的是只在目录里面找文件，拒绝 `..`、点文件和目录外的符号链接。",
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/host.js` 对文件名用 `^[\\w.-]+$` 做限制，不符合就返回 400。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "inject-does-not-wait-for-providers",
+      "title": "inject 只等服务出现，不等别的插件往里注册的东西；这类检查放到第一次用的时候",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.1-rc.2",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件依赖另一个插件注册的东西，比如某种子代理的提供方。在 `apply` 里检查「它注册了没有」，没有就报错。结果第一次启动时随机失败：有时好，有时说找不到。",
+      "do": "`inject` 保证的是服务本身已经存在。别的插件行往这个服务里注册的内容，是那些插件自己的 effect，加载器并发激活时，它们可能比你的 `apply` 晚到。\n\n所以这类检查不要放在 `apply` 里，放到第一次真正要用的时候。那时还没有，再抛一个用户看得懂、知道该去装什么的错误。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/index.ts`。注释写明：提供方的注册是兄弟插件行的 effect，在加载器并发激活下可能晚于本插件挂载，所以能力校验放在第一次派出成员的时候，而不是挂载时。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本推荐搭配的 0.2.1-rc.2；没有在宿主里单独复现。"
+    },
+    {
+      "id": "network-timeouts-and-mirrors",
+      "title": "插件要联网：超时分两段设，再给国内用户留镜像和手动覆盖的口子",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件要从网上拉东西：目录、安装包、图片。写的时候网很好，一个总超时就够了。到了用户那里，慢网下被总超时砍断，或者某个地址在国内根本连不上，界面就一直转圈。",
+      "do": "- 超时分两段：等响应头一个超时；正文不设总时长，改成「多久没有新数据进来就放弃」。慢但一直在动的下载不会被误杀，真卡死的才会被砍。\n- 需要访问 npm、GitHub 这类地址时，准备国内可达的镜像，主镜像不通再试备用的。\n- 给用户留环境变量或设置项，能手动指定镜像或代理。\n- 失败时把试过的每个地址和各自的失败原因都报出来，不要只说「网络错误」。",
+      "evidence": [
+        "公开仓库：dshmarket 1.73.17 的 `src/body-progress.ts`，响应头超时和正文停滞超时各 15 秒，注释写明后者故意不是总预算：只要还有字节进来就继续读。`src/regions.ts` 里定义了国内的 npm 镜像和一个备用镜像，并支持用环境变量覆盖。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "no-new-session-event-types",
+      "title": "不要往会话记录里追加自己发明的事件类型，会话会打不开",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "插件想在会话里记一点自己的东西（进度、标记、统计），最顺手的办法是往会话记录里追加一条自定义 `type` 的事件。",
+      "do": "不要这么做。读会话的一方遇到不认识的事件类型，只有它带着「可忽略」标记时才放行；而插件通过正常的追加接口写不出这个标记。结果是这个会话之后会拒绝重新打开。\n\n该用的办法有两个：\n\n- 能从已有事件推出来的状态，就从已有事件推，不另外存。\n- 插件自己的数据，放到宿主的存储服务里。具体用哪个服务，用 `cordis_inspect_query` 查。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明在稳定性一节写明，不要追加新 `type` 的会话事件，并解释了原因：未知事件只有带 `ignorable: true` 才被接受，而实时的 `Session.append()` 设不了这个标记，会话会拒绝重新打开。同一节还说明，能写可忽略记录的那个接口是留给宿主自己的实验包用的。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "optional-services-in-inject",
+      "title": "用到的可选服务都写进 inject，缺了它插件就安静地不启动，而不是报错",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "插件用到某个不是处处都有的服务（比如只有桌面版才有的、或者另一个插件提供的）。在 `apply` 里直接 `ctx.某服务.xxx()`，换一个没有这个服务的环境，一启动就抛错。",
+      "do": "把用到的服务写进插件的 `inject`。只在一部分逻辑里用到的，用 `ctx.inject(['服务名'], scope => { ... })` 把那部分包起来。\n\n这样在没有这个服务的环境里，插件（或者那一部分）只是不激活，不会抛错连累别的东西。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明在稳定性一节写明，把可选服务放进 `inject` 或 `ctx.inject([...], ...)`，这样在没有这些服务的 profile 里插件保持不激活，而不是抛错。",
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/index.ts` 把网页服务当成可选的：按新旧两个服务名依次找，先尝试注册一次，再监听服务出现的事件，等它来了再注册，这样没有网页服务的环境里插件照样能启动。",
+        "宿主代码：0.2.2-rc.1 宿主自己的插件管理器就是这么用的，它用 `ctx.inject(['connection'], scope => ...)` 包住注册 HTTP 路由的那一段。"
+      ],
+      "unverified": null,
       "notes": null
     },
     {
@@ -142,7 +255,7 @@
       "source": "「发现好插件」作者的创造经验记录",
       "superseded_by": null,
       "when": "想让插件界面在页面里直接 `fetch()` 读一点数据，于是用 `connection.fetch.register` 注册了一条 `/api/...` 路由。页面一请求，返回 401。",
-      "do": "`/api/` 下的路由在连接鉴权后面，页面里裸 `fetch` 不带凭据，会被拦住。页面要直接读的数据，改用 `webServer.register` 注册到一个不在 `/api` 下的路径：\n\n```js\nctx.webServer.register({\n  kind: 'exact',\n  path: '/my-plugin/state',\n  handler(req, res) { /* 写响应 */ },\n});\n```\n\n注意反过来的一面：这条路由页面不带凭据就能读到，所以只放不敏感的只读内容。写操作、带个人信息的数据仍然走 `connection.fetch`，让鉴权替你把门。",
+      "do": "`/api/` 下的路由在连接鉴权后面，页面里裸 `fetch` 不带凭据，会被拦住。页面要直接读的数据，改用 `webServer.register` 注册到一个不在 `/api` 下的路径：\n\n```js\nctx.webServer.register({\n  kind: 'exact',\n  path: '/my-plugin/state',\n  handler(req, res) { /* 写响应 */ },\n});\n```\n\n注意反过来的一面：`webServer` 上的路由宿主不替你鉴权。不敏感的只读内容可以直接放；其余的要自己在处理函数里过一遍鉴权，做法见 webserver-routes-authenticate-yourself。",
       "evidence": [
         "本人实测：「发现好插件」作者 2026-11-10 做一个用量浮窗插件时，用 `connection.fetch.register` 注册的 `/api/*` 路由在页面里 fetch 返回 401；同一份数据改用 `webServer.register({kind: 'exact', ...})` 注册到非 `/api` 路径后，页面可以直接读到。",
         "宿主代码：0.2.2-rc.1 里 `/api` 这条总路由由连接服务注册并做准入检查，代码注释把 `connection.fetch` 的路由称为在连接的鉴权围栏之内；宿主自己也用 `webServer.register({kind: 'exact', path, handler(req, res)})` 这个写法注册路径。"
@@ -151,10 +264,306 @@
       "notes": "用之前用 `cordis_inspect_query` 查一下 `webServer` 服务在你这个版本上的签名。"
     },
     {
+      "id": "register-inside-effect",
+      "title": "所有注册都放进 ctx.effect 并起个名字，插件停用或热更新时才清得干净",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "在 `apply` 里直接注册路由、展位、词典、定时器、监听。插件被停用、卸载或热更新之后，旧的注册还留着，再启用就撞上「已经注册过」，或者旧代码还在响应。",
+      "do": "每一处注册都包进 `ctx.effect`，把注册返回的清理函数交回去，并在第二个参数里写个带插件名的标签，出问题时日志里认得出是谁的：\n\n```js\nctx.effect(() => ctx.webServer.register({kind: 'prefix', path: '/my-plugin', handler}), 'my-plugin: routes');\n```\n\n自己开的定时器、监听、临时文件，也在 effect 的清理函数里收掉。",
+      "evidence": [
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/host.js` 和 `client/index.jsx`，路由和侧栏入口都包在带标签的 `ctx.effect` 里，清理函数里取消订阅并释放注册。",
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `src/client/index.tsx`，注册词典时把两个取消函数一起从 effect 里返回，标签是插件名加用途。",
+        "官方说明：0.2.2-rc.1 内置的插件开发说明把「注册是属于某个上下文的 effect」列为基本原则，并要求在 `apply` 里用 `ctx.effect` 注册资源并返回清理函数。",
+        "宿主代码：0.2.2-rc.1 宿主自己注册路由时也是 `ctx.effect(() => ctx.connection.fetch.register(...), '标签')`。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "reject-cross-site-writes",
+      "title": "插件自己的写接口要拒绝跨站请求",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件在本机开了能改数据的 HTTP 接口。用户浏览器里开着的任何一个别的网页，理论上都能朝这个本机地址发请求。",
+      "do": "所有写操作先检查请求是不是自己页面发来的，不是就拒绝。两种现成写法：\n\n- 看 `sec-fetch-site` 头：有值而且既不是 `same-origin` 也不是 `none`，返回 403。\n- 看 `origin` 头：和 `host` 对不上，返回 403。同时只接受 `POST` 加 `application/json`，并给请求体设大小上限。",
+      "evidence": [
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/host.js`，所有写操作前检查 `sec-fetch-site`，注释写的是「所有写操作都拒绝跨站请求」。",
+        "公开仓库：dsh-guizang-design 0.1.4 的 `lib/index.js`，读请求体的函数要求 POST、JSON 类型、`origin` 与 `host` 一致，并限制为 16KB。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "schemastery-from-host",
+      "title": "写可实时修改的 Config，Schemastery 要用宿主那份（@deepseek-ai/schemastery）",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "给插件写 Config，想让用户在设置里改了马上生效。照着网上 Cordis 的例子从公开的 `schemastery` 包引入。结果设置页里改了显示成功，实际的值却一直没变。",
+      "do": "Schemastery 从 `@deepseek-ai/schemastery` 引入，不要用公开的 `schemastery` 包。\n\n只有宿主那一份在解析配置时，会把标了「可实时修改」的字段包成加载器认得的引用。用公开包建出来的是普通值，加载器没东西可提交，于是每一次实时修改都被悄悄丢掉，而且写入那一步还会报告成功。",
+      "evidence": [
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `src/config.ts`。文件开头的注释专门说明了这一点：Schemastery 来自 DSH 而不是公开包，这是功能上必需的；并描述了用公开包的后果，即写入报告成功、生效的值永远不变。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本声明支持的 0.2.2-rc.1；没有在宿主里单独复现。证据是这个公开仓库的注释和它的实际用法。"
+    },
+    {
+      "id": "schemastery-optional-nested-object",
+      "title": "Schemastery 里可选的嵌套对象要显式写成「对象或没有」，光写 z.object() 会被补成空对象再校验失败",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.1-rc.2",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "Config 里有一个可选的嵌套配置，比如「备用路由」，里面有两个必填字段。用户没配它，插件一启动就报这两个字段缺失。",
+      "do": "Schemastery 的 `z.object()` 带一个隐含的默认值 `{}`。用户没写这一项时，它被补成空对象，再拿去校验，必填字段自然不满足。\n\n可选的嵌套对象要把「没有」明确写出来：\n\n```ts\nconst fallbackRoute = z.union([\n  z.object({provider: z.string().required(), model: z.string().required()}),\n  z.const(undefined),\n]);\n```\n\n只允许出现其中一边的结构（比如只有 `allow` 或只有 `deny`）也是同样的坑，同样处理。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/index.ts`。注释写明 `z.object()` 在 Schemastery 里有隐含的 `{}` 默认值，可选项要显式建模为「不存在」，否则缺失的路由会被当成空对象校验并在必填键上失败；代码即上面的写法，并注明工具策略有同样的问题。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本推荐搭配的 0.2.1-rc.2。相关条目：schemastery-from-host。"
+    },
+    {
+      "id": "secrets-stay-on-host",
+      "title": "密钥只留在后台：文件权限收紧，发给界面的只有「有没有」和末四位",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件要用户填一个 API Key。存的时候和别的设置放在一起，取设置的接口把整份设置原样发给界面，密钥就跟着到了浏览器里。",
+      "do": "- 存密钥的文件权限设成只有本人可读写（0600）。\n- 给界面的那份设置里去掉密钥本身，只带两样：有没有填过、末四位。\n- 更新设置时，界面没传新密钥就保留原来的；要清空就用一个明确的「清除」标记，别把空字符串当成清空。",
+      "evidence": [
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/settings.js`。写设置文件时指定 `mode: 0o600` 并再 `chmod` 一次；有一个专门生成「发给浏览器的版本」的函数，注释写的是只告诉它有没有密钥和末四位；更新逻辑里只有非空的新密钥才覆盖，另有单独的清除标记。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "state-file-two-hosts",
+      "title": "自己存 JSON 状态文件：先写临时文件再改名，并且按两个宿主进程同时在跑来设计",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件把数据存成自己的一个 JSON 文件。用户同时开着桌面版和网页版，就是两个宿主进程在读写同一个文件；或者写到一半进程被杀，文件只剩半截。",
+      "do": "- 写入时先写到临时文件，再用改名替换正式文件，这样不会出现半截文件。\n- 同一进程里的写操作排成一队，一个一个来。\n- 每次读写前比一下文件的修改时间，变了就重新读，别用内存里的旧数据盖掉另一个进程刚写的。\n- 每次从文件读进来都过一遍迁移函数，把旧版本缺的字段补上。",
+      "evidence": [
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/store.js`。文件开头的注释写明桌面端和 Web 端读同一份数据、两个 Host 进程可能同时运行，所以每次写入前按修改时间判断要不要重读；写入用「临时文件加改名」；写操作经一个队列串行执行；读入时调用迁移函数。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "tunable-values-in-config",
+      "title": "想让用户能调的值放进插件的 Config，不要写死在代码里",
+      "kind": "好做法",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "插件里有一些因人而异的值：轮询间隔、条数上限、默认开关。写成代码里的常量，用户想改只能改插件源码，一升级就被覆盖。",
+      "do": "把这些值声明在插件的 `Config` 里。用户在自己的 `cordis.patch.yml` 里改，这一层是用户自己的，插件升级不会动它。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明在稳定性一节写明，可调的值放进插件的 `Config`，用户在 `cordis.patch.yml` 里修改，用户的 patch 层在升级后保留。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "webserver-routes-authenticate-yourself",
+      "title": "webServer 上的路由宿主不替你鉴权，每个请求自己过一遍 connection.requestRejection",
+      "kind": "踩过的坑",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "用 `webServer.register` 给插件开了一组 HTTP 路由，以为和 `connection.fetch` 一样自带登录检查。其实没有：同一台机器上别的网页也可能请求到它。",
+      "do": "在 `inject` 里同时声明 `webServer` 和 `connection`。每个请求进来先问一句鉴权服务，被拒就直接返回：\n\n```js\nfunction requestRejection(ctx, req) {\n  const connection = ctx.get('connection');\n  if (typeof connection?.requestRejection !== 'function') return 403; // 拿不到鉴权服务，一律拒绝\n  return connection.requestRejection({headers: req.headers});        // 通过时返回 undefined\n}\n```\n\n只有完全不敏感的只读内容，才可以不做这一步。",
+      "evidence": [
+        "公开仓库：dsh-media-desk 2.6.2 的 `src/host.js`。代码注释写明 Web 服务不会替插件路由鉴权，所以每个请求都自己走一遍 Host/Origin 和登录凭证检查，拿不到鉴权服务时一律拒绝；处理函数第一步就是调它。",
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `src/index.ts` 用同一个办法给自己的路由设了一道门：`ctx.connection.requestRejection(req) === undefined` 才放行。"
+      ],
+      "unverified": null,
+      "notes": "相关条目：page-fetch-use-webserver。"
+    },
+    {
+      "id": "bound-delegation-and-auto-repair",
+      "title": "会自己派子代理、自己返工的插件，要有硬上限，到了就交给人",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件让模型可以再派出别的代理，或者「审查不过就自动返工」。没有上限的话，子代理再派子代理，返工之后再返工，钱和时间一起烧，用户只看到它一直在忙。",
+      "do": "- 派生深度设上限，默认不允许再往下派。沿着父会话一层层往上数，超了就报错，并在错误里告诉模型该怎么办（比如回去向上一级汇报）。\n- 上限要拦在创建子会话的接口上，而不只是藏起某个工具。工具可能被改名，或者从代码里直接调。\n- 自动返工只处理「需要修改」这类结论。结论是「否决」时直接停下交给人，不拿自动修复当人的决定。\n- 这些上限做成用户可以调的配置。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29。`src/members.ts` 在派生深度超过上限时抛出明确的错误，文字里让成员向队长汇报而不是再派代理；`src/index.ts` 里这个深度上限的默认值是 0。`src/quality-gates.ts` 里，审查结论为否决时直接升级，理由写的是自动修复不能代替人的决定。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "byte-budget-test-for-resident-prompt",
+      "title": "给每次请求都要带的提示词和工具说明定一个字节预算，用测试守住",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件每加一个工具、每多写一句说明，所有会话的每一次请求都多带一点。一点一点加上去，没人注意，直到有人发现装了你的插件之后每轮都贵了一截。",
+      "do": "写一个测试：用真实的宿主包把提示词和工具定义组装出来，量出每次请求常驻的字节数，给每种模式定一个上限。超了测试就失败，逼着你要么精简、要么把工具改成按需出现。\n\n量的是字节，是个粗尺子。它不等于 Token 数，也不说明缓存命中情况，但足够拦住无意中的膨胀。",
+      "evidence": [
+        "公开仓库：dsh-ops 0.5.2 的 `test/prompt-budget.test.mjs`。测试给 minimal、standard、cordis、ptc 四种预设各定了一个常驻字节预算，断言每种默认预设都不超；注释写明量的是宿主全部文字和工具定义而不只是插件的增量，并且不对分词和缓存做任何声明。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "cap-tool-output-with-recovery-hint",
+      "title": "工具可能返回很长的内容时设一个上限，并在截断处写明怎么拿到剩下的",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "给模型的工具会读文件、列目录、跑命令。碰上一个大文件，几万字一次性塞进对话，后面每一轮都带着它。",
+      "do": "- 给工具输出定一个字节上限。按最终发给模型的内容算，不按原始文本算。\n- 超了就截断，并在末尾加一行说明：内容不完整、因为什么被截、怎么拿到剩下的（比如「用更小的范围重读」）。让模型知道该怎么办，而不是以为这就是全部。\n- 截断时别把一个字符切成两半。",
+      "evidence": [
+        "公开仓库：dsh-ops 0.5.2 的 `src/projections/native/render.ts`。输出上限是 64KB；超出时二分找到加上提示后仍放得下的最长前缀，末尾追加一行「显示不完整、被输出预算截断」的提示和恢复办法；注释写明量的是转义后的最终内容块，并避免切开代理对字符。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "one-operation-two-callers",
+      "title": "界面上的按钮和给模型的工具，背后走同一个实现",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "插件有界面，也想让模型能帮用户操作。于是界面里写一套「新建、修改、删除」，工具里又写一套。两套慢慢不一样了：界面能做的模型做不了，或者同一个操作两边结果不同。",
+      "do": "- 每个操作只实现一次，写成后台的一个方法。它返回结果或者明确的状态，失败时带上原因。\n- 界面的按钮通过后台入口调它，把失败原因显示出来。\n- 给模型的工具也调它，参数和含义保持一致，把它的返回值当工具结果。相近的操作可以合成一个工具，用一个 `action` 参数区分。\n- 纯界面的动作（切标签、展开详情）不用做成工具。\n- 涉及授权的动作只留给用户：批准一次工具调用、回答模型提的问题、放宽权限。这些不给模型开工具。\n\n写完验证一下：只用工具把操作做一遍，和在界面上做的结果比一比。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明有专门一节讲「一个操作，两个调用方」，内容即上面几条，并要求授权类动作保持只有用户能做，验证时确认模型执行不了也授权不了这些动作。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "per-agent-setup-must-be-synchronous",
+      "title": "在「会话创建」时给每个会话做准备，要同步做完；await 一下就会输给第一条请求",
+      "kind": "踩过的坑",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.1-rc.2",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件要给每个新会话（包括子代理的会话）挂上自己的监听、工具或上下文。在会话创建的监听里先 `await` 读了点东西再挂。结果第一条请求已经发出去了，挂上的东西没赶上。",
+      "do": "- 在会话创建的监听里同步完成挂载，需要异步拿的东西提前准备好。\n- 挂在这个会话自己的上下文上（`agent.ctx`），并用 `agent.ctx.effect` 登记清理函数，会话结束时自动收掉。\n- 先订阅「新建会话」，再给已经存在的会话补挂一遍，中间不留空档。每个会话只挂一次。\n- 插件卸载时这些挂载不会自动消失，清理函数自己也留一份，卸载时一起调。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/harness-compat.ts`，挂载逻辑上方的注释写的是：故意同步，在这里 await 会输掉和第一条请求的竞争。",
+        "官方说明：0.2.2-rc.1 内置的插件开发说明要求把每个会话的行为注册在 `agent.ctx` 上（在会话创建的监听里拿到），包在 `agent.ctx.effect()` 里，并在插件自己的 effect 里也留一份清理函数，因为卸载插件不会自动清掉 `agent.ctx` 上的注册。"
+      ],
+      "unverified": null,
+      "notes": "监听的事件名在不同宿主版本间变过。用 `cordis_inspect_query` 查你这个版本上的事件名。"
+    },
+    {
+      "id": "prompt-section-fixed-and-conditional",
+      "title": "往系统提示词里加说明：文字固定，只在用得上的会话里出现，其余返回空",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件想教模型怎么用自己的工具，于是往系统提示词里加了一大段。所有会话、所有模式都带着它，哪怕那个会话根本看不到这些工具；内容还会随状态变来变去。",
+      "do": "- 用 `ctx.systemPrompt.section()` 加，不要去改整份提示词的组装。\n- 文字在插件加载时定好，之后不跟着状态、配置、工具结果变。会变的内容放到消息里。\n- 每个会话先看它实际看得到哪些工具：一个相关的都没有，就返回空字符串，这一段自然消失。\n- 写短。能用一张「什么任务用什么工具」的小表说清，就不写成段落。",
+      "evidence": [
+        "公开仓库：dsh-ops 0.5.2 的 `src/policy.ts`，生成说明的函数在相关工具一个都不可见时直接返回空字符串，否则输出一张只含可见工具的「任务 / 工具」表。",
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/capabilities.ts`，注释写明策略只在挂载时取一次快照，配置、团队状态和工具结果都不得改写这段前缀。",
+        "官方说明：0.2.2-rc.1 内置的插件开发说明要求用 `ctx.systemPrompt.section()` 加提示词，不要通过监听整份提示词的组装来增删文字。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "timer-use-followup",
+      "title": "定时器到点要让模型动起来，用 agent.followup()；agent.inject() 不会唤醒它",
+      "kind": "踩过的坑",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "做提醒、巡检、定时汇报这类插件：定时器到点，往会话里塞一段内容，等模型处理。塞是塞进去了，模型没反应，直到用户下一次说话才一起冒出来。",
+      "do": "到点要启动一轮工作，调 `agent.followup()`，它会唤醒模型。\n\n`agent.inject()` 只是把内容放进收件箱，不唤醒。没有别的输入进来，它就一直等着。它适合「下次模型干活时顺便带上这段背景」的场景。\n\n定时器记得在它所属的 effect 里清掉，插件卸载或会话结束时不要留着。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明在性能一节写明，启动工作的定时器调用 `agent.followup()`，它会唤醒 agent；`agent.inject()` 不唤醒，注入的内容可能一直留在收件箱里等到有别的输入；定时器要在所属的 effect 里清除。"
+      ],
+      "unverified": null,
+      "notes": "同一节还提醒：等结果要等 `turn/end`、`assistant/message` 这类落盘的事件，不要去轮询状态。用之前用 `cordis_inspect_query` 确认这些方法和事件名在你的版本上还在。"
+    },
+    {
+      "id": "tool-errors-say-effects-and-retry",
+      "title": "工具失败时告诉模型两件事：副作用发生了没有，能不能重试",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "工具报错只返回一句「失败了」。模型不知道那次写入到底有没有落地，于是原样再来一遍，结果同一件事做了两次。",
+      "do": "失败结果里带上三样：\n\n- 一个稳定的错误码。\n- 副作用状态：没发生、已发生、不确定。\n- 重试建议：不要重试、改了输入再试、状态变了再试、可以有限次重试。\n\n规矩是副作用说了算：只要副作用状态是「不确定」，就不给重试建议，让模型先去确认。",
+      "evidence": [
+        "公开仓库：dsh-ops 0.5.2 的 `src/kernel/errors.ts`。每个错误码对应一条重试策略；决定策略的函数里，副作用状态为未知时直接返回「未知」策略，注释写的是副作用优先于重试建议，一次失败的回执绝不能成为重放一次可能已发生的写入的理由。`src/shells/host-contract.ts` 把这些信息拼成一行（错误码、副作用、重试、下一步）返回给模型。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
       "id": "tool-param-required",
       "title": "工具的可选参数直接不写 required，写 required: false 会注册失败",
       "kind": "踩过的坑",
-      "category": "接口与注册",
+      "category": "工具与提示词",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
       "verified": "2026-11-10",
@@ -165,6 +574,25 @@
       "evidence": [
         "报错原文：`harness.defineTool <参数路径>.required must be true when present`",
         "宿主代码：0.2.2-rc.1 规范化工具参数时，属性上只要出现 `required` 而值不是 `true`，就抛上面这个错。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "waterfall-append-not-replace",
+      "title": "挂在请求流水线上的监听：先等 next()，在别人的结果上追加，别整个替换",
+      "kind": "好做法",
+      "category": "工具与提示词",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件监听 `agent/pre-step` 这类流水线事件，想在每一步前加一条消息或改点东西。直接返回了自己拼的结果，别的插件加的消息、宿主带的字段都没了。两个插件单独用都好，一起装就互相抹掉。",
+      "do": "- 先 `const decision = await next()`，拿到后面各环节的结果。\n- 结果是「拒绝」就原样返回，不要改写。\n- 这件事不归你管（比如事件是别的会话的），直接 `return next()`。\n- 要加东西就在它上面追加：`{...decision, messages: [...decision.messages, 你的消息]}`。展开 `decision`，别的字段才不会丢。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/command.ts`，`agent/pre-step` 的监听就是这个顺序：等 `next()`，拒绝则原样返回，没有自己的事也原样返回，否则在 `decision.messages` 后面追加一条。",
+        "官方说明：0.2.2-rc.1 内置的插件开发说明要求，不负责做决定的流水线监听必须返回 `next()`；改写 `agent/pre-step` 的决定时要展开原决定，这样其他字段才能保留。"
       ],
       "unverified": null,
       "notes": null
@@ -268,6 +696,26 @@
       "notes": null
     },
     {
+      "id": "follow-host-language-and-test-keys",
+      "title": "做双语：语言跟宿主走，再用一个测试保证两份词典的 key 一样",
+      "kind": "好做法",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件做了中英两份文案。加新文案时只加了一边，或者占位符写得不一样；用户切到另一种语言，界面上漏出 key 名，或者一半中文一半英文。",
+      "do": "- 语言跟着宿主的语言服务走，监听它的变化。老版本宿主没有这个服务时，退回浏览器语言。\n- 写一个测试：两份词典的 key 集合完全一样，占位符一致，英文那份里没有中文，代码和页面里用到的每个 key 都在词典里。",
+      "evidence": [
+        "公开仓库：dsh-guizang-design 0.1.4 的 `lib/client.js` 用 `ctx.inject(['locale'], ...)` 读语言并监听 `locale/change`，注释写明老版本没有这个服务时跟随浏览器语言；`test/plugin.test.mjs` 里有一个测试正是检查上面四件事。",
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `tests/locales.spec.ts` 同样断言各语言的 key 集合相同。",
+        "官方说明：0.2.2-rc.1 内置的创造说明要求界面上可见的文字经过客户端的语言服务。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
       "id": "main-root-container-layout",
       "title": "main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0",
       "kind": "踩过的坑",
@@ -302,6 +750,24 @@
         "宿主代码：0.2.2-rc.1 里 `main` 和 `conversation.view` 两个展位都存在；`inputActions` 是会话界面服务随会话绑定提供的标准 prop。"
       ],
       "unverified": "「注册到 `main` 的面板拿不到 `inputActions`、没有多轮记忆」是作者的经验。这次只核对到 `inputActions` 由会话层提供，没有在宿主里实际注册一个 main 面板去试拿不拿得到。动手前请用 `cordis_inspect_query` 查一下 `main` 展位在你这个版本上给了哪些 props。",
+      "notes": null
+    },
+    {
+      "id": "no-iframe-pages",
+      "title": "插件页面用 React 组件挂进展位，不要让后台出一个 HTML 再用 iframe 嵌进来",
+      "kind": "踩过的坑",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "官方内置说明",
+      "superseded_by": null,
+      "when": "手里有一个现成的网页，或者觉得写独立 HTML 更顺手，于是让插件后台把页面吐出来，在宿主里用 iframe 嵌一下。",
+      "do": "把页面写成 React 组件，注册到展位里。\n\niframe 里的文档拿不到宿主的主题变量，不会跟着深色浅色切换，也拿不到宿主的语言设置。看上去就是宿主里贴了一块外来的东西，而且这些事后补不回来。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 安装包内置的插件开发说明在界面一节写明，不要从 Host 提供 HTML 页面再用 iframe 嵌入，并列出了 iframe 文档收不到的三样东西：主题变量、明暗切换、语言。"
+      ],
+      "unverified": null,
       "notes": null
     },
     {
@@ -373,6 +839,157 @@
       "evidence": [
         "官方说明：0.2.2-rc.1 内置的插件开发说明要求用 inspect 列出的主题变量写样式，固定色值只用于插画；并说明这是和宿主保持一致风险最低的办法，变量改名最多变丑，不会渲染失败。",
         "本人实测：「发现好插件」作者 2026-11-10 回看自己的插件，一张卡片外层写死了深色渐变和浅色字，内层用的是主题底色；在浅色回退下，白底上的字几乎看不见。这是离线渲染真实组件看到的，没有在真实宿主的浅色模式下复现。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "base-plugin-service-with-features",
+      "title": "做给别的插件用的底座：服务里带上版本号和功能名列表，使用方按功能名判断",
+      "kind": "好做法",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "你的插件对外提供一个服务，别的插件往里注册页面或能力。你加了新功能，使用方的插件却可能跑在用户还没升级的旧版底座上，一调新接口就报错。",
+      "do": "底座这边：\n\n- 在 `apply` 一开始就把服务提供出去（`ctx.provide`），别等界面挂好。\n- 服务上带一个版本号，和一个功能名列表。每加一个对外能力，就往列表里加一个名字；删掉某个能力时，在注释里写明从哪个版本起不能再依赖它。\n\n使用方这边：\n\n- 把底座声明成可选的 peer（不是 dependency，否则会有两份实例），服务名写进 `inject`。底座没装时自己照常工作，装了才接上。\n- 用新能力之前先判断：`if (!ctx.底座服务.features.includes('某功能')) return;`",
+      "evidence": [
+        "公开仓库：DSH-better-sidebar 0.30.1。`src/client/index.tsx` 里 `ctx.provide('betterSidebar', service)`；`src/client/service.ts` 里导出服务版本号和功能名列表，服务对象带着 `version` 和 `features`，注释里记录了某个功能从哪个版本起被移除、使用方不能再依赖；`docs/external-plugin-guide.md` 给使用方的示例正是按功能名判断后「老版本优雅降级」，并要求把底座写成 optional 的 peer。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "declare-supported-host-versions",
+      "title": "写清楚支持哪些宿主版本：engines.dsh 和 @deepseek-ai/dsh-* 的 peer 范围，宿主启动时都会查",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件在自己机器上好好的，换一个宿主版本就「消失」了：没有报错弹窗，列表里像是没装。或者反过来，范围写得太死，宿主一升级插件就不加载。",
+      "do": "- 在 `package.json` 的 `engines.dsh` 里写明支持的宿主版本范围，README 里写一句在哪些版本上实际测过。\n- `peerDependencies` 里的 `@deepseek-ai/dsh` 和 `@deepseek-ai/dsh-*` 也是宿主会查的对象。范围不满足时，这个插件所在的那一行会被整个禁用。\n- 宿主现在还是预发布版本号（比如 `0.2.2-rc.1`），范围要带上预发布号，例如 `^0.2.2-rc.1` 或 `>=0.2.1-rc.5 <0.3.0`。不要精确钉死一个版本，也不要写 `^0.2.0` 这种不带预发布号的。\n- 记住 `0.x` 上的 `^` 不跨小版本：`^0.1.7-rc.1` 管不到 `0.2.0-rc.2`。宿主跨小版本时，插件要跟着发一版。\n- 插件突然不加载了，先去看宿主启动日志里有没有版本不满足的那一行。",
+      "evidence": [
+        "宿主代码：0.2.2-rc.1 启动时用 `semver.satisfies(宿主版本, 范围, {includePrerelease: true})` 检查插件清单里的要求，`engines.dsh` 在检查之列，不是字符串还会直接报错。",
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `tests/market-manifest.spec.ts`。测试里的注释记录了这套检查的行为：从 0.1.7-rc.1 起对每个 `@deepseek-ai/dsh*` 的 peer 做上述判断，不满足就禁用整行，只在日志里留一行，把 peer 标成 optional 也不豁免；并说明了 `^` 在 0.x 上不跨小版本。它用这个测试强制所有这类 peer 都写成 `^0.2.2-rc.1`。",
+        "公开仓库：dsh-media-desk 2.6.2 的 `package.json` 写的是 `\"dsh\": \">=0.2.1-rc.5 <0.3.0\"`，README 里写明已在 0.2.2-rc.1 的桌面版和网页版上测过。",
+        "公开仓库：dshmarket 1.73.17 的 `src/verify.ts` 把这种情况单列为一种状态：插件的 dsh peer 范围不包含正在运行的宿主版本时，宿主自己的启动检查每次启动都会跳过它，重启也没用。"
+      ],
+      "unverified": null,
+      "notes": "「禁用整行、没有弹窗、optional 不豁免」来自 DSH-better-sidebar 的注释，「每次启动都被跳过」来自 dshmarket 的注释，两个仓库说法一致；宿主代码里只核对到检查本身和 `engines.dsh`。"
+    },
+    {
+      "id": "guard-against-double-mount",
+      "title": "插件可能被别的合集一起带上时，防一手重复挂载",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "你的插件比较受欢迎，被别人做的「全家桶」合集收了进去。用户既装了合集、又单独装了你的插件，同一个包被挂载两次：同一组路由注册两遍，启动时报 `duplicate prefix route`，整棵插件树都起不来。",
+      "do": "在自己的 `cordis.patch.yml` 里，给插入的那一行加一个 `disabled` 表达式：如果已经有另一行启用着、挂的是同一个包，自己这一行就退让。\n\n```yaml\n- insert:\n    - id: my-plugin\n      name: 'my-plugin'\n      disabled: !!js \"[...ctx.loader.entries()].some((e) => e.options.name === 'my-plugin' && e.options.id !== 'my-plugin' && !e.disabled)\"\n```\n\n它只看得见排在自己前面的行，所以合集要排在前面才有效。这是已知的局限。",
+      "evidence": [
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `cordis.patch.yml`。文件里的注释写明了场景（合集已经用自己的 id 挂载了这个包）、后果（两次挂载重复注册路由，启动时整棵插件树失败，报 duplicate prefix route）、做法和局限；它的 CI 里有一条专门测这种情况的流程。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本声明支持的 0.2.2-rc.1；没有在宿主里单独复现。用之前用 `cordis_inspect_query` 确认 `ctx.loader.entries()` 在你的版本上可用。"
+    },
+    {
+      "id": "no-framework-packages-in-dependencies",
+      "title": "@deepseek-ai/* 的包不要放进 dependencies，它们由宿主提供",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件代码里 import 了宿主的框架包，顺手 `npm install` 进了 `dependencies`（或者 `optionalDependencies`）。安装插件时，profile 里就多出一份真实的框架拷贝。",
+      "do": "- `@deepseek-ai/*` 的包只放在 `peerDependencies`（并在 `devDependencies` 里留一份同样范围的，供本地类型检查）。\n- `dependencies` 和 `optionalDependencies` 里都不要有。放在 optional 里也不行，装得上的时候它照样会落一份拷贝。\n\n多出来的那份拷贝会盖住宿主自己的那份，同一个模块变成两个身份，表现出来是一些很难看懂的运行时崩溃。",
+      "evidence": [
+        "公开仓库：dsh-TUI 0.19.0 的 `scripts/verify-manifest-deps.ts`。脚本开头的注释写明：框架包由宿主提供，绝不能作为运行时依赖发布，profile 里的真实拷贝会遮住宿主实例并分裂模块身份，并点名了它造成过的一次崩溃。脚本在构建时检查这几条，不满足就失败。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本声明支持的 0.2.2-rc.1；没有在宿主里单独复现。这条和 react-from-host 是同一个道理：宿主有的，就用宿主的。"
+    },
+    {
+      "id": "no-named-imports-of-host-helpers",
+      "title": "不要从宿主包里 import 具名的辅助函数，用服务本身，并在运行时看方法在不在",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.1.2-alpha.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "宿主的某个包导出了几个方便的辅助函数，插件直接 `import { 某函数 } from '@deepseek-ai/dsh-某包'`。宿主下个版本把这个导出删了。",
+      "do": "「服务不在」和「导出不在」后果完全不同：\n\n- 服务不在：写在 `inject` 里的话，插件只是安静地不启动。\n- 具名导出不在：模块求值时就是一个 `SyntaxError`，加载器把它当成入口失败，宿主直接退出。装了你的插件，整个宿主起不来。\n\n所以只依赖服务本身。辅助函数做的事自己写几行内联进来。服务的方法在不同版本间有变化的，用 `typeof service.某方法 === 'function'` 判断，没有就降级并记一条日志。",
+      "evidence": [
+        "公开仓库：dshmarket 1.73.17 的 `src/settings.ts`。文件注释记录了这次事故：它原来从宿主的设置包里引入两个辅助函数，宿主 0.1.2-alpha.1 把它们删了，报 `SyntaxError: The requested module ... does not provide an export named ...`，装上这个插件宿主就完全起不来；注释还说明了服务本身在那前后并没有变，只是包装函数没了。现在的代码内联了包装函数做的事，并用 `typeof ... register === 'function'` 判断。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "tell-users-the-exact-version",
+      "title": "发版后让用户装带确切版本号的包：桌面版 24 小时内装包名或 latest 拿到的是上一版",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.1-rc.2",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "刚发了新版，告诉用户「更新一下」。用户在桌面版里装了包名或者 `@latest`，装完还是旧版。你去 npm 上看，新版明明已经在了。",
+      "do": "- 安装说明里写带确切版本号的写法，例如 `@your-scope/your-plugin@1.2.3`。\n- 原因：桌面版自带的 pnpm 11 默认有 24 小时的「最小发布年龄」。发版后 24 小时内，不带版本号或者写 `@latest`，解析到的是上一个版本。\n- 不要教用户去关掉兼容性检查或者这个发布年龄策略。\n- 另外要知道：桌面版自带一份宿主内核和包管理器。升级全局命令行不会升级桌面版里的那一份。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `README.md`。安装一节要求用户输入带版本号的写法，并说明桌面版的 pnpm 11 默认 24 小时最小发布年龄、期间裸包名或 `@latest` 装到的是上一版；还说明桌面版自带内核和包管理器，升级全局命令行不会升级它。"
+      ],
+      "unverified": null,
+      "notes": "宿主版本取的是这个插件版本推荐搭配的 0.2.1-rc.2；24 小时这个默认值没有在 0.2.2-rc.1 桌面版上单独核对。"
+    },
+    {
+      "id": "test-the-built-package",
+      "title": "发版前检查打包出来的东西本身，再把安装包挂进目标版本的宿主跑一遍",
+      "kind": "好做法",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "单元测试全过，发出去的包却装不上：客户端注册的 id 和包名对不上，或者某个文件没打进包里，或者在新版宿主上一启动就崩。这些都发生在「源码之后」，只测源码测不到。",
+      "do": "- 对构建产物写测试：客户端产物里注册的 id 等于 `package.json` 的包名；清单里的版本和包版本一致；入口文件和每个分块都存在，并且都在 `files` 清单里；客户端产物只 `require` 一份允许名单里的模块。\n- 发版流程里加一步：安装你要支持的那个宿主版本，把打好的安装包真的挂进去，无界面启动，把各个页面点一遍。\n- 这一步里固定宿主版本号，不要用「最新」。",
+      "evidence": [
+        "公开仓库：DSH-better-sidebar 0.30.1 的 `tests/manifest-consistency.spec.ts`，测试名就写着这些检查：版本与 package.json 一致、入口文件在构建产物里存在、官方包注册的是包名。",
+        "公开仓库：同一仓库的 `.github/workflows/ci.yml`，流程里先 `npm install -g @deepseek-ai/dsh@0.2.2-rc.1`，再 `pnpm build && pnpm pack`，然后跑挂载测试。",
+        "公开仓库：dshmarket 1.73.17 的 `scripts/preflight.mjs`，打包前检查 `cordis.patch.yml` 是按包名插入的，以及客户端文件是以 `window.__ModuleLoader__.load({ id: \"包名\"` 开头的。",
+        "公开仓库：dsh-agent-teams 0.1.29 的 `scripts/verify-package.mjs`，其中一项检查是 `cordis.patch.yml` 里的 name 等于发布的包名。"
+      ],
+      "unverified": null,
+      "notes": "相关条目：client-entry-module-loader（注册 id 不等于包名的后果）。"
+    },
+    {
+      "id": "version-differences-in-one-place",
+      "title": "不同宿主版本之间的差异，收在一个地方，按「有没有这个方法」来判断",
+      "kind": "好做法",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件要同时支持几个宿主版本，而宿主的接口在这些版本间改过名、改过形状。于是代码里到处是 `if (版本 >= ...)`，或者到处是试探性的写法，过半年没人敢动。",
+      "do": "- 所有「为了兼容某个版本」的代码放进同一个文件或目录，业务代码只调它。\n- 按能力判断，不按版本号判断：看这个方法在不在，先试新的名字，再试旧的。\n- 每一处兼容代码写明：是为哪个版本的什么差异加的，上游做了什么改动之后可以删。\n- 哪个都对不上时，明确报「不支持这个宿主」并告诉用户用测试过的版本，不要猜着往下跑。",
+      "evidence": [
+        "公开仓库：dsh-agent-teams 0.1.29 的 `src/harness-compat.ts`。文件开头写明这里是经过核对的几个宿主版本的边界，版本相关的形状都留在这个文件里，并提醒接口存在不等于承诺支持未来版本；对不上时抛出「不支持的 Harness 契约，请使用明确测试过的版本」。",
+        "公开仓库：dsh-TUI 0.19.0 的 `src/dsh-adapter/compat/index.ts`。目录规则写在文件头：每个补丁自带能力探测，上游吸收了这个差异就自动失效或退回原行为，并且写明哪个上游改动可以让它退役。"
       ],
       "unverified": null,
       "notes": null

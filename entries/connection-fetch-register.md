@@ -36,4 +36,4 @@ ctx.connection.fetch.register({
 
 ## 还没核对的
 
-两点。一是内置清单原话里还有一句「不要包在 `ctx.effect()` 里」，但 0.2.2-rc.1 宿主自己的代码有三处正是包在 `ctx.effect(() => ctx.connection.fetch.register(...))` 里注册的；这句话当初为什么写没有留下记录，所以没收进做法。二是路径不放在 `/api/` 下、或者不写 `requestBody` 分别会怎样，没找到宿主对应的校验，也没实测，只知道照上面写是宿主自己在用的写法。
+两点。一是内置清单原话里还有一句「不要包在 `ctx.effect()` 里」，但 0.2.2-rc.1 宿主自己的代码有三处正是包在 `ctx.effect(() => ctx.connection.fetch.register(...))` 里注册的；这句话当初为什么写没有留下记录，所以没收进做法；社区头部插件注册路由时也都包在 `ctx.effect` 里（见 register-inside-effect）。二是路径不放在 `/api/` 下、或者不写 `requestBody` 分别会怎样，没找到宿主对应的校验，也没实测，只知道照上面写是宿主自己在用的写法。

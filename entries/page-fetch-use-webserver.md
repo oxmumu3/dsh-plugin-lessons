@@ -24,7 +24,7 @@ ctx.webServer.register({
 });
 ```
 
-注意反过来的一面：这条路由页面不带凭据就能读到，所以只放不敏感的只读内容。写操作、带个人信息的数据仍然走 `connection.fetch`，让鉴权替你把门。
+注意反过来的一面：`webServer` 上的路由宿主不替你鉴权。不敏感的只读内容可以直接放；其余的要自己在处理函数里过一遍鉴权，做法见 webserver-routes-authenticate-yourself。
 
 ## 证据
 

@@ -15,7 +15,7 @@ const ENTRIES = join(ROOT, 'entries');
 const SCHEMA = 1;
 const RAW_BASE = 'https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main';
 
-const CATEGORIES = ['动手之前', '接口与注册', '客户端加载', '界面与体验', '看效果与排错'];
+const CATEGORIES = ['动手之前', '接口与注册', '工具与提示词', '客户端加载', '界面与体验', '发版与兼容', '看效果与排错'];
 const STATUSES = ['有效', '待复核', '已过期'];
 const KINDS = ['踩过的坑', '好做法'];
 // 条目文件里的中文字段 → JSON 里的英文字段
