@@ -1,6 +1,10 @@
 {
   "schema": 1,
   "count": 22,
+  "kinds": [
+    "踩过的坑",
+    "好做法"
+  ],
   "categories": [
     "动手之前",
     "接口与注册",
@@ -17,6 +21,7 @@
     {
       "id": "agree-design-in-plain-words",
       "title": "动手前用三五句大白话对齐设计：挂在哪、几个文件、数据存哪",
+      "kind": "好做法",
       "category": "动手之前",
       "status": "有效",
       "host_version": "与版本无关",
@@ -34,6 +39,7 @@
     {
       "id": "copy-a-working-plugin",
       "title": "找一个结构最接近、已经能跑的插件照着改",
+      "kind": "好做法",
       "category": "动手之前",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -52,6 +58,7 @@
     {
       "id": "empty-shell-first",
       "title": "第一版只做能点开、不白屏的空架子，之后一轮只加一个功能",
+      "kind": "好做法",
       "category": "动手之前",
       "status": "有效",
       "host_version": "与版本无关",
@@ -70,6 +77,7 @@
     {
       "id": "inspect-before-writing",
       "title": "写代码前先用 cordis_inspect 查清展位和接口，别凭记忆猜",
+      "kind": "好做法",
       "category": "动手之前",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -88,6 +96,7 @@
     {
       "id": "connection-fetch-register",
       "title": "用 connection.fetch.register 开接口：先声明 connection，路径放在 /api/ 下，写明 requestBody",
+      "kind": "好做法",
       "category": "接口与注册",
       "status": "待复核",
       "host_version": "0.2.2-rc.1",
@@ -106,6 +115,7 @@
     {
       "id": "page-fetch-use-webserver",
       "title": "页面要直接 fetch 的只读数据，用 webServer.register，别走 connection.fetch",
+      "kind": "踩过的坑",
       "category": "接口与注册",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -124,6 +134,7 @@
     {
       "id": "tool-param-required",
       "title": "工具的可选参数直接不写 required，写 required: false 会注册失败",
+      "kind": "踩过的坑",
       "category": "接口与注册",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -142,6 +153,7 @@
     {
       "id": "client-entry-module-loader",
       "title": "客户端入口要包在 window.__ModuleLoader__.load 里，直接写 ESM 的 export 会连累其他插件",
+      "kind": "踩过的坑",
       "category": "客户端加载",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -162,6 +174,7 @@
     {
       "id": "duplicate-factory-registration",
       "title": "冷启动报 duplicate factory registration：先查注册 id，别连点重启",
+      "kind": "踩过的坑",
       "category": "客户端加载",
       "status": "待复核",
       "host_version": "0.2.2-rc.1",
@@ -181,6 +194,7 @@
     {
       "id": "no-host-ui-packages",
       "title": "不要 require 宿主的界面组件包，控件自己写，只共用主题变量",
+      "kind": "踩过的坑",
       "category": "客户端加载",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -199,6 +213,7 @@
     {
       "id": "react-from-host",
       "title": "React 用宿主提供的那一份，不要自己再打包一份",
+      "kind": "好做法",
       "category": "客户端加载",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -217,6 +232,7 @@
     {
       "id": "first-open-not-blank",
       "title": "第一次打开给示例数据或明确的下一步，不要给一张白屏",
+      "kind": "好做法",
       "category": "界面与体验",
       "status": "有效",
       "host_version": "与版本无关",
@@ -235,6 +251,7 @@
     {
       "id": "main-root-container-layout",
       "title": "main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0",
+      "kind": "踩过的坑",
       "category": "界面与体验",
       "status": "待复核",
       "host_version": "未记录",
@@ -252,6 +269,7 @@
     {
       "id": "no-chat-input-in-main-panel",
       "title": "不要在独立面板（main）里自己画聊天输入框，对话挂到会话视图上",
+      "kind": "踩过的坑",
       "category": "界面与体验",
       "status": "待复核",
       "host_version": "未记录",
@@ -270,6 +288,7 @@
     {
       "id": "one-feedback-layer",
       "title": "提示、撤销、报错全站只做一套",
+      "kind": "好做法",
       "category": "界面与体验",
       "status": "有效",
       "host_version": "与版本无关",
@@ -287,6 +306,7 @@
     {
       "id": "one-state-store",
       "title": "界面状态收在一个地方，改动都走同一个口子",
+      "kind": "好做法",
       "category": "界面与体验",
       "status": "有效",
       "host_version": "与版本无关",
@@ -304,6 +324,7 @@
     {
       "id": "status-needs-text",
       "title": "表示状态不要只靠颜色，每个状态都带文字",
+      "kind": "踩过的坑",
       "category": "界面与体验",
       "status": "有效",
       "host_version": "与版本无关",
@@ -321,6 +342,7 @@
     {
       "id": "theme-tokens-only",
       "title": "颜色只用宿主的 --dsw-alias-* 变量，深色浅色都要看",
+      "kind": "踩过的坑",
       "category": "界面与体验",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -339,6 +361,7 @@
     {
       "id": "check-light-dark-narrow",
       "title": "交付前在深色、浅色、宽屏、窄屏下各看一遍",
+      "kind": "好做法",
       "category": "看效果与排错",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -357,6 +380,7 @@
     {
       "id": "measure-real-render",
       "title": "改样式先量真实组件的渲染结果，不要对着设计稿或截图猜",
+      "kind": "踩过的坑",
       "category": "看效果与排错",
       "status": "有效",
       "host_version": "与版本无关",
@@ -375,6 +399,7 @@
     {
       "id": "restart-after-replacing-package",
       "title": "换掉已装插件的代码后要彻底退出重开，打包版桌面的 Cmd+R 不是整页刷新",
+      "kind": "踩过的坑",
       "category": "看效果与排错",
       "status": "有效",
       "host_version": "0.2.2-rc.1",
@@ -393,6 +418,7 @@
     {
       "id": "stop-after-three-rounds",
       "title": "同一个问题连改三轮没好就停，写个总结开新会话接着做",
+      "kind": "好做法",
       "category": "看效果与排错",
       "status": "有效",
       "host_version": "与版本无关",

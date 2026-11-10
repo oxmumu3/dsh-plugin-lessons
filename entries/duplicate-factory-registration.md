@@ -1,5 +1,6 @@
 ---
 标题: 冷启动报 duplicate factory registration：先查注册 id，别连点重启
+类型: 踩过的坑
 分类: 客户端加载
 状态: 待复核
 宿主版本: 0.2.2-rc.1

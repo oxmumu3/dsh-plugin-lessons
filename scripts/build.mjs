@@ -15,9 +15,10 @@ const SCHEMA = 1;
 
 const CATEGORIES = ['动手之前', '接口与注册', '客户端加载', '界面与体验', '看效果与排错'];
 const STATUSES = ['有效', '待复核', '已过期'];
+const KINDS = ['踩过的坑', '好做法'];
 // 条目文件里的中文字段 → JSON 里的英文字段
-const FIELDS = {标题: 'title', 分类: 'category', 状态: 'status', 宿主版本: 'host_version', 最近核对: 'verified', 来源: 'source', 替代项: 'superseded_by'};
-const REQUIRED_FIELDS = ['标题', '分类', '状态', '宿主版本', '最近核对', '来源'];
+const FIELDS = {标题: 'title', 类型: 'kind', 分类: 'category', 状态: 'status', 宿主版本: 'host_version', 最近核对: 'verified', 来源: 'source', 替代项: 'superseded_by'};
+const REQUIRED_FIELDS = ['标题', '类型', '分类', '状态', '宿主版本', '最近核对', '来源'];
 const SECTIONS = {什么情况下会遇到: 'when', 该怎么做: 'do', 证据: 'evidence', 还没核对的: 'unverified', 备注: 'notes'};
 const REQUIRED_SECTIONS = ['什么情况下会遇到', '该怎么做', '证据'];
 
@@ -52,6 +53,7 @@ function parse(file) {
   }
   for (const key of REQUIRED_FIELDS) if (!entry[FIELDS[key]]) bad(file, `缺少字段「${key}」`);
   if (entry.category && !CATEGORIES.includes(entry.category)) bad(file, `分类只能是：${CATEGORIES.join('、')}`);
+  if (entry.kind && !KINDS.includes(entry.kind)) bad(file, `类型只能是：${KINDS.join('、')}`);
   if (entry.status && !STATUSES.includes(entry.status)) bad(file, `状态只能是：${STATUSES.join('、')}`);
   if (entry.verified && !/^\d{4}-\d{2}-\d{2}$/u.test(entry.verified)) bad(file, '「最近核对」写成 2026-11-10 这样的日期');
   if (entry.status === '已过期' && !entry.superseded_by) bad(file, '已过期的条目要填「替代项」：另一条的文件名，或写「无」');
@@ -92,19 +94,19 @@ if (problems.length) {
 const order = entry => CATEGORIES.indexOf(entry.category);
 entries.sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
 const pick = entry => ({
-  id: entry.id, title: entry.title, category: entry.category, status: entry.status,
+  id: entry.id, title: entry.title, kind: entry.kind, category: entry.category, status: entry.status,
   host_version: entry.host_version, verified: entry.verified, source: entry.source, superseded_by: entry.superseded_by,
   when: entry.when, do: entry.do, evidence: entry.evidence, unverified: entry.unverified, notes: entry.notes,
 });
-const json = `${JSON.stringify({schema: SCHEMA, count: entries.length, categories: CATEGORIES, statuses: STATUSES, entries: entries.map(pick)}, null, 2)}\n`;
+const json = `${JSON.stringify({schema: SCHEMA, count: entries.length, kinds: KINDS, categories: CATEGORIES, statuses: STATUSES, entries: entries.map(pick)}, null, 2)}\n`;
 
 const live = entries.filter(entry => entry.status !== '已过期');
 const digest = [
-  '# DSH 插件避坑合集',
+  '# DSH 插件经验合集：踩过的坑和好做法',
   '',
   '<!-- 这个文件由 scripts/build.mjs 生成，不要手改；要改就改 entries/ 里对应的条目。 -->',
   '',
-  `下面是社区整理的 ${live.length} 条做 DSH 插件的经验，每条都标了核对时的宿主版本。它们是参考，不是规定：宿主会升级，条目会过期。和当前宿主的实际接口（用 cordis_inspect 查到的）或用户的要求不一致时，以后两者为准。标了「待复核」的条目证据还不全，用之前先自己验证。`,
+  `下面是社区整理的 ${live.length} 条做 DSH 插件的经验，有踩过的坑（这么做会出问题），也有好做法（公开插件或官方这么做）。每条都标了核对时的宿主版本。它们是参考，不是规定：宿主会升级，条目会过期。和当前宿主的实际接口（用 cordis_inspect 查到的）或用户的要求不一致时，以后两者为准。标了「待复核」的条目证据还不全，用之前先自己验证。`,
   '',
   ...CATEGORIES.flatMap(category => {
     const group = live.filter(entry => entry.category === category);
@@ -112,7 +114,7 @@ const digest = [
     return [`## ${category}`, '', ...group.flatMap(entry => [
       `### ${entry.status === '待复核' ? '［待复核］' : ''}${entry.title}`,
       '',
-      `宿主版本：${entry.host_version}　最近核对：${entry.verified}　条目：entries/${entry.id}.md`,
+      `类型：${entry.kind}　宿主版本：${entry.host_version}　最近核对：${entry.verified}　条目：entries/${entry.id}.md`,
       '',
       `**什么情况下会遇到：** ${entry.when}`,
       '',
@@ -133,5 +135,6 @@ if (process.argv.includes('--check')) {
 } else {
   for (const [name, content] of outputs) writeFileSync(join(ROOT, name), content);
   const count = status => entries.filter(entry => entry.status === status).length;
-  console.log(`已生成 pitfalls.json 和 PITFALLS.md：共 ${entries.length} 条（有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
+  const kind = name => entries.filter(entry => entry.kind === name).length;
+  console.log(`已生成 pitfalls.json 和 PITFALLS.md：共 ${entries.length} 条（踩过的坑 ${kind('踩过的坑')}，好做法 ${kind('好做法')}；有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
 }

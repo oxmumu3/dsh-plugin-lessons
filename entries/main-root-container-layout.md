@@ -1,5 +1,6 @@
 ---
 标题: main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0
+类型: 踩过的坑
 分类: 界面与体验
 状态: 待复核
 宿主版本: 未记录

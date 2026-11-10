@@ -1,14 +1,14 @@
-# DSH 插件避坑合集
+# DSH 插件经验合集：踩过的坑和好做法
 
 <!-- 这个文件由 scripts/build.mjs 生成，不要手改；要改就改 entries/ 里对应的条目。 -->
 
-下面是社区整理的 22 条做 DSH 插件的经验，每条都标了核对时的宿主版本。它们是参考，不是规定：宿主会升级，条目会过期。和当前宿主的实际接口（用 cordis_inspect 查到的）或用户的要求不一致时，以后两者为准。标了「待复核」的条目证据还不全，用之前先自己验证。
+下面是社区整理的 22 条做 DSH 插件的经验，有踩过的坑（这么做会出问题），也有好做法（公开插件或官方这么做）。每条都标了核对时的宿主版本。它们是参考，不是规定：宿主会升级，条目会过期。和当前宿主的实际接口（用 cordis_inspect 查到的）或用户的要求不一致时，以后两者为准。标了「待复核」的条目证据还不全，用之前先自己验证。
 
 ## 动手之前
 
 ### 动手前用三五句大白话对齐设计：挂在哪、几个文件、数据存哪
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/agree-design-in-plain-words.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/agree-design-in-plain-words.md
 
 **什么情况下会遇到：** 用户说了想要什么，模型马上开始写代码。写到一半才发现挂的位置不是用户想的那个，或者数据存的地方不对，前面几轮全部白做。
 
@@ -20,7 +20,7 @@
 
 ### 找一个结构最接近、已经能跑的插件照着改
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/copy-a-working-plugin.md
+类型：好做法　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/copy-a-working-plugin.md
 
 **什么情况下会遇到：** 从零写目录结构、清单（`package.json` 里的 `dsh` 段）、注册方式、客户端外壳。这些东西格式是固定的，写错一处就装不上或者白屏，而且报错经常不指向真正的原因。
 
@@ -30,7 +30,7 @@
 
 ### 第一版只做能点开、不白屏的空架子，之后一轮只加一个功能
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/empty-shell-first.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/empty-shell-first.md
 
 **什么情况下会遇到：** 一次把所有功能写完再装。装上去白屏或者报错，这时出问题的可能是清单、注册、客户端外壳、某个功能里的任何一处，没法定位。
 
@@ -40,7 +40,7 @@
 
 ### 写代码前先用 cordis_inspect 查清展位和接口，别凭记忆猜
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/inspect-before-writing.md
+类型：好做法　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/inspect-before-writing.md
 
 **什么情况下会遇到：** 准备写一个新插件，或者要用一个没用过的展位（slot）、服务方法、事件、主题变量。模型很容易凭印象写出一个看起来对的接口名，装上去才发现不存在，或者签名已经变了。
 
@@ -54,7 +54,7 @@
 
 ### ［待复核］用 connection.fetch.register 开接口：先声明 connection，路径放在 /api/ 下，写明 requestBody
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/connection-fetch-register.md
+类型：好做法　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/connection-fetch-register.md
 
 **什么情况下会遇到：** 插件后台要给自己的界面提供一个带鉴权的 HTTP 接口。
 
@@ -79,7 +79,7 @@ ctx.connection.fetch.register({
 
 ### 页面要直接 fetch 的只读数据，用 webServer.register，别走 connection.fetch
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/page-fetch-use-webserver.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/page-fetch-use-webserver.md
 
 **什么情况下会遇到：** 想让插件界面在页面里直接 `fetch()` 读一点数据，于是用 `connection.fetch.register` 注册了一条 `/api/...` 路由。页面一请求，返回 401。
 
@@ -99,7 +99,7 @@ ctx.webServer.register({
 
 ### 工具的可选参数直接不写 required，写 required: false 会注册失败
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/tool-param-required.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/tool-param-required.md
 
 **什么情况下会遇到：** 用 `defineTool` 给插件注册工具，想标明某个参数是可选的，顺手写了 `required: false`。
 
@@ -118,7 +118,7 @@ parameters: {
 
 ### 客户端入口要包在 window.__ModuleLoader__.load 里，直接写 ESM 的 export 会连累其他插件
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/client-entry-module-loader.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/client-entry-module-loader.md
 
 **什么情况下会遇到：** 给插件写客户端部分（`package.json` 里 `./client` 指向的那个文件），按写普通模块的习惯直接写 `export const inject = ...`、`export function apply() {}`。
 
@@ -146,7 +146,7 @@ window.__ModuleLoader__.load({
 
 ### ［待复核］冷启动报 duplicate factory registration：先查注册 id，别连点重启
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/duplicate-factory-registration.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/duplicate-factory-registration.md
 
 **什么情况下会遇到：** 给宿主加了或改了第三方插件之后冷启动，界面起不来，宿主弹出恢复框，日志里有 `client-modules: duplicate factory registration for "某个名字"`。
 
@@ -161,7 +161,7 @@ window.__ModuleLoader__.load({
 
 ### 不要 require 宿主的界面组件包，控件自己写，只共用主题变量
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/no-host-ui-packages.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/no-host-ui-packages.md
 
 **什么情况下会遇到：** 想让插件界面和宿主长得一样，于是直接 `require('@deepseek-ai/dsh-client-ui-primitives')`，拿宿主的按钮、弹窗来用。
 
@@ -175,7 +175,7 @@ window.__ModuleLoader__.load({
 
 ### React 用宿主提供的那一份，不要自己再打包一份
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/react-from-host.md
+类型：好做法　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/react-from-host.md
 
 **什么情况下会遇到：** 写带界面的插件，习惯性地把 react、react-dom 装成依赖，一起打进客户端产物。
 
@@ -189,7 +189,7 @@ window.__ModuleLoader__.load({
 
 ### 第一次打开给示例数据或明确的下一步，不要给一张白屏
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/first-open-not-blank.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/first-open-not-blank.md
 
 **什么情况下会遇到：** 插件装好第一次点开，数据还是空的。页面只有一个标题和一个「新建」按钮，或者干脆空白。用户不知道这东西用起来是什么样，也就不会去用。
 
@@ -201,7 +201,7 @@ window.__ModuleLoader__.load({
 
 ### ［待复核］main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0
 
-宿主版本：未记录　最近核对：2026-11-10　条目：entries/main-root-container-layout.md
+类型：踩过的坑　宿主版本：未记录　最近核对：2026-11-10　条目：entries/main-root-container-layout.md
 
 **什么情况下会遇到：** 给注册到 `main` 展位的页面写最外层容器，想让它撑满整个区域，用了 `position: absolute; inset: 0`。
 
@@ -217,7 +217,7 @@ window.__ModuleLoader__.load({
 
 ### ［待复核］不要在独立面板（main）里自己画聊天输入框，对话挂到会话视图上
 
-宿主版本：未记录　最近核对：2026-11-10　条目：entries/no-chat-input-in-main-panel.md
+类型：踩过的坑　宿主版本：未记录　最近核对：2026-11-10　条目：entries/no-chat-input-in-main-panel.md
 
 **什么情况下会遇到：** 做一个有自己页面的插件（注册到 `main` 展位），想在页面里放一个输入框，让用户在这里和模型对话。
 
@@ -231,7 +231,7 @@ window.__ModuleLoader__.load({
 
 ### 提示、撤销、报错全站只做一套
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/one-feedback-layer.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/one-feedback-layer.md
 
 **什么情况下会遇到：** 每个页面各写各的成功提示和报错样式：有的弹框，有的行内红字，有的什么都不显示。用户做完一个操作，不确定成没成。
 
@@ -243,7 +243,7 @@ window.__ModuleLoader__.load({
 
 ### 界面状态收在一个地方，改动都走同一个口子
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/one-state-store.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/one-state-store.md
 
 **什么情况下会遇到：** 界面一复杂，每个组件各自存一点状态，同一份数据在三处各有一个副本。改了一处，另外两处没跟上，出现「列表更新了、角标没更新」这类毛病。
 
@@ -253,7 +253,7 @@ window.__ModuleLoader__.load({
 
 ### 表示状态不要只靠颜色，每个状态都带文字
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/status-needs-text.md
+类型：踩过的坑　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/status-needs-text.md
 
 **什么情况下会遇到：** 做进度条、状态灯、标签这类东西，用几种颜色区分阶段，自己觉得一看就懂。
 
@@ -265,7 +265,7 @@ window.__ModuleLoader__.load({
 
 ### 颜色只用宿主的 --dsw-alias-* 变量，深色浅色都要看
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/theme-tokens-only.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/theme-tokens-only.md
 
 **什么情况下会遇到：** 给插件界面配色，直接写了 `#fff`、`rgba(...)` 这样的固定色值，或者自己定了一套渐变。在你开发时用的那个主题下很好看，用户一切到另一个主题，字就看不清了。
 
@@ -279,7 +279,7 @@ window.__ModuleLoader__.load({
 
 ### 交付前在深色、浅色、宽屏、窄屏下各看一遍
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/check-light-dark-narrow.md
+类型：好做法　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/check-light-dark-narrow.md
 
 **什么情况下会遇到：** 只在自己平时用的那个主题和窗口宽度下看过，觉得没问题就交付了。
 
@@ -291,7 +291,7 @@ window.__ModuleLoader__.load({
 
 ### 改样式先量真实组件的渲染结果，不要对着设计稿或截图猜
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/measure-real-render.md
+类型：踩过的坑　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/measure-real-render.md
 
 **什么情况下会遇到：** 界面看着挤、乱，想调间距、对齐、字号。常见做法是看一眼截图凭感觉改，或者在单独的设计稿 HTML 上调好了再搬回插件。
 
@@ -303,7 +303,7 @@ window.__ModuleLoader__.load({
 
 ### 换掉已装插件的代码后要彻底退出重开，打包版桌面的 Cmd+R 不是整页刷新
 
-宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/restart-after-replacing-package.md
+类型：踩过的坑　宿主版本：0.2.2-rc.1　最近核对：2026-11-10　条目：entries/restart-after-replacing-package.md
 
 **什么情况下会遇到：** 改了插件代码，重新装了一遍，界面上看还是老样子。于是怀疑代码没改对，又改一轮。其实跑的一直是旧代码。
 
@@ -317,7 +317,7 @@ window.__ModuleLoader__.load({
 
 ### 同一个问题连改三轮没好就停，写个总结开新会话接着做
 
-宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/stop-after-three-rounds.md
+类型：好做法　宿主版本：与版本无关　最近核对：2026-11-10　条目：entries/stop-after-three-rounds.md
 
 **什么情况下会遇到：** 一个报错改了又改，每一轮都觉得这次应该好了。上下文越来越长，模型开始在自己前几轮的错误假设上打转。
 

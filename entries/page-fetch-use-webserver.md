@@ -1,5 +1,6 @@
 ---
 标题: 页面要直接 fetch 的只读数据，用 webServer.register，别走 connection.fetch
+类型: 踩过的坑
 分类: 接口与注册
 状态: 有效
 宿主版本: 0.2.2-rc.1

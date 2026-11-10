@@ -1,5 +1,6 @@
 ---
 标题: 用 connection.fetch.register 开接口：先声明 connection，路径放在 /api/ 下，写明 requestBody
+类型: 好做法
 分类: 接口与注册
 状态: 待复核
 宿主版本: 0.2.2-rc.1
