@@ -1,0 +1,411 @@
+{
+  "schema": 1,
+  "count": 22,
+  "categories": [
+    "动手之前",
+    "接口与注册",
+    "客户端加载",
+    "界面与体验",
+    "看效果与排错"
+  ],
+  "statuses": [
+    "有效",
+    "待复核",
+    "已过期"
+  ],
+  "entries": [
+    {
+      "id": "agree-design-in-plain-words",
+      "title": "动手前用三五句大白话对齐设计：挂在哪、几个文件、数据存哪",
+      "category": "动手之前",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "用户说了想要什么，模型马上开始写代码。写到一半才发现挂的位置不是用户想的那个，或者数据存的地方不对，前面几轮全部白做。",
+      "do": "写第一行代码之前，用三五句不带术语的话告诉用户：准备挂在界面的哪个位置、大概分几个文件、数据存在哪里。等用户说「对」再动手。\n\n用户要改主意，在这一步改最便宜。",
+      "evidence": [
+        "经验做法：「发现好插件」作者连续做了多个插件之后写进内置清单的做法。这是做法建议，不是宿主规则，没有对照数据。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "copy-a-working-plugin",
+      "title": "找一个结构最接近、已经能跑的插件照着改",
+      "category": "动手之前",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "从零写目录结构、清单（`package.json` 里的 `dsh` 段）、注册方式、客户端外壳。这些东西格式是固定的，写错一处就装不上或者白屏，而且报错经常不指向真正的原因。",
+      "do": "先找一个和你要做的东西结构最像、在当前宿主上确实能跑的插件：宿主内置的、本机已经装好的，或者创造模式自带的模板（有装饰类界面和 MCP 连接两套）。目录结构、清单字段、注册写法、客户端外壳都从它抄，只改属于你自己的部分。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的创造说明让模型先读 `templates/decoration/` 或 `templates/mcp/` 再写文件，不是从空白开始。",
+        "本人实测：「发现好插件」作者 2026-11-10 凭记忆手写客户端外壳，写成了 ESM，导致宿主启动失败（见 client-entry-module-loader）。事后记下的结论是：写之前先打开一个已装插件的客户端文件，照抄外壳。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "empty-shell-first",
+      "title": "第一版只做能点开、不白屏的空架子，之后一轮只加一个功能",
+      "category": "动手之前",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "一次把所有功能写完再装。装上去白屏或者报错，这时出问题的可能是清单、注册、客户端外壳、某个功能里的任何一处，没法定位。",
+      "do": "第一版只要求一件事：装得上、点得开、不白屏。确认之后每一轮只加一个功能，加完就看一次效果。哪一轮坏了，问题就在那一轮加的东西里。",
+      "evidence": [
+        "经验做法：「发现好插件」作者连续做了多个插件之后写进内置清单的做法。这是做法建议，不是宿主规则，没有对照数据。",
+        "官方说明：0.2.2-rc.1 内置的创造说明对界面类插件也是这个思路，要求第一版老实待在所选展位的版面里，先不规划复杂效果。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "inspect-before-writing",
+      "title": "写代码前先用 cordis_inspect 查清展位和接口，别凭记忆猜",
+      "category": "动手之前",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "准备写一个新插件，或者要用一个没用过的展位（slot）、服务方法、事件、主题变量。模型很容易凭印象写出一个看起来对的接口名，装上去才发现不存在，或者签名已经变了。",
+      "do": "在创造模式里先调 `cordis_inspect_list`，看当前宿主有哪些可查的 Provider；再用 `cordis_inspect_query` 查你要用的那几样：展位树和 props、服务方法签名、事件、主题变量。查到什么用什么。\n\n这个库里的条目和你查到的结果对不上时，信查到的。条目会过期，宿主不会骗你。",
+      "evidence": [
+        "宿主代码：0.2.2-rc.1 注册了 `cordis_inspect_list` 和 `cordis_inspect_query` 两个工具。工具自带的说明就写着要在写插件代码前调用，用来读服务方法、事件、配置、工具参数、主题变量和实时展位树。",
+        "官方说明：同版本安装包内置的插件开发说明要求，文中提到的每个服务方法和事件名都先用 `cordis_inspect_query` 确认，以装着的宿主为准。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "connection-fetch-register",
+      "title": "用 connection.fetch.register 开接口：先声明 connection，路径放在 /api/ 下，写明 requestBody",
+      "category": "接口与注册",
+      "status": "待复核",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "插件后台要给自己的界面提供一个带鉴权的 HTTP 接口。",
+      "do": "- 在插件的 `inject` 里声明 `connection`。\n- 路径放在 `/api/` 下。\n- 写上 `methods`。\n- 写明 `requestBody`：一般请求用 `'buffered'`，大文件上传用 `'streaming'`。\n\n```js\n// 插件的 inject 里要有 'connection'\nctx.connection.fetch.register({\n  path: '/api/my-plugin/items',\n  methods: ['GET'],\n  requestBody: 'buffered',\n  fetch: request => Response.json({ok: true}),\n});\n```",
+      "evidence": [
+        "宿主代码：0.2.2-rc.1 里宿主自己注册的几条路由都是这个形状：`inject` 里有 `connection`，`path` 在 `/api/` 下，带 `methods` 和 `requestBody`（见到 `'buffered'` 和 `'streaming'` 两种取值）。",
+        "经验做法：「发现好插件」内置清单。"
+      ],
+      "unverified": "两点。一是内置清单原话里还有一句「不要包在 `ctx.effect()` 里」，但 0.2.2-rc.1 宿主自己的代码有三处正是包在 `ctx.effect(() => ctx.connection.fetch.register(...))` 里注册的；这句话当初为什么写没有留下记录，所以没收进做法。二是路径不放在 `/api/` 下、或者不写 `requestBody` 分别会怎样，没找到宿主对应的校验，也没实测，只知道照上面写是宿主自己在用的写法。",
+      "notes": null
+    },
+    {
+      "id": "page-fetch-use-webserver",
+      "title": "页面要直接 fetch 的只读数据，用 webServer.register，别走 connection.fetch",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」作者的创造经验记录",
+      "superseded_by": null,
+      "when": "想让插件界面在页面里直接 `fetch()` 读一点数据，于是用 `connection.fetch.register` 注册了一条 `/api/...` 路由。页面一请求，返回 401。",
+      "do": "`/api/` 下的路由在连接鉴权后面，页面里裸 `fetch` 不带凭据，会被拦住。页面要直接读的数据，改用 `webServer.register` 注册到一个不在 `/api` 下的路径：\n\n```js\nctx.webServer.register({\n  kind: 'exact',\n  path: '/my-plugin/state',\n  handler(req, res) { /* 写响应 */ },\n});\n```\n\n注意反过来的一面：这条路由页面不带凭据就能读到，所以只放不敏感的只读内容。写操作、带个人信息的数据仍然走 `connection.fetch`，让鉴权替你把门。",
+      "evidence": [
+        "本人实测：「发现好插件」作者 2026-11-10 做一个用量浮窗插件时，用 `connection.fetch.register` 注册的 `/api/*` 路由在页面里 fetch 返回 401；同一份数据改用 `webServer.register({kind: 'exact', ...})` 注册到非 `/api` 路径后，页面可以直接读到。",
+        "宿主代码：0.2.2-rc.1 里 `/api` 这条总路由由连接服务注册并做准入检查，代码注释把 `connection.fetch` 的路由称为在连接的鉴权围栏之内；宿主自己也用 `webServer.register({kind: 'exact', path, handler(req, res)})` 这个写法注册路径。"
+      ],
+      "unverified": null,
+      "notes": "用之前用 `cordis_inspect_query` 查一下 `webServer` 服务在你这个版本上的签名。"
+    },
+    {
+      "id": "tool-param-required",
+      "title": "工具的可选参数直接不写 required，写 required: false 会注册失败",
+      "category": "接口与注册",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "用 `defineTool` 给插件注册工具，想标明某个参数是可选的，顺手写了 `required: false`。",
+      "do": "必填的参数写 `required: true`，可选的参数不写这个字段。\n\n```js\nparameters: {\n  text: {type: 'string', required: true, description: '必填'},\n  note: {type: 'string', description: '可选：不写 required'},\n}\n```",
+      "evidence": [
+        "报错原文：`harness.defineTool <参数路径>.required must be true when present`",
+        "宿主代码：0.2.2-rc.1 规范化工具参数时，属性上只要出现 `required` 而值不是 `true`，就抛上面这个错。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "client-entry-module-loader",
+      "title": "客户端入口要包在 window.__ModuleLoader__.load 里，直接写 ESM 的 export 会连累其他插件",
+      "category": "客户端加载",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」作者的创造经验记录",
+      "superseded_by": null,
+      "when": "给插件写客户端部分（`package.json` 里 `./client` 指向的那个文件），按写普通模块的习惯直接写 `export const inject = ...`、`export function apply() {}`。",
+      "do": "客户端文件是当普通浏览器脚本加载的，不是 ES 模块。整个文件就是一次注册调用：\n\n```js\nwindow.__ModuleLoader__.load({\n  id: '@your-scope/your-plugin', // 和 package.json 的 name 完全一样，scope 不能省\n  factory(require) {\n    const React = require('react');\n    // ...\n    return {\n      inject: ['slots'],\n      apply(ctx) { /* 在这里注册 */ },\n    };\n  },\n});\n```\n\n工厂函数直接返回插件对象，或者用 `module.exports` 交付，两种都有人在用。\n\n用了打包工具的话，检查的是最终产物是不是这个形状，不是源码。按 ES 模块方式跑 `node --check` 抓不到这个问题。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的创造说明写明，客户端产物注册一个惰性工厂，id 等于包名；自带模板 `templates/decoration/client.js` 就是上面这个形状。",
+        "宿主代码：0.2.2-rc.1 自带的客户端包（例如 `@deepseek-ai/dsh-api-gateway`）也是 `window.__ModuleLoader__.load({id, factory: (require) => {...}})`。",
+        "本人实测：「发现好插件」作者 2026-11-10 把客户端写成 ESM 的 `export`，脚本语法失败（控制台是 `Unexpected token 'export'` 这类报错），同一批加载的其他插件客户端跟着失败，宿主启动失败并弹出禁用第三方插件的恢复框。一个插件写错，所有插件一起倒。",
+        "公开仓库：社区插件 dsh-media-desk 2.6.2 的构建脚本开头就注明，要把客户端打包成宿主的惰性 CommonJS 模块。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "duplicate-factory-registration",
+      "title": "冷启动报 duplicate factory registration：先查注册 id，别连点重启",
+      "category": "客户端加载",
+      "status": "待复核",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」作者的创造经验记录",
+      "superseded_by": null,
+      "when": "给宿主加了或改了第三方插件之后冷启动，界面起不来，宿主弹出恢复框，日志里有 `client-modules: duplicate factory registration for \"某个名字\"`。",
+      "do": "1. 先看报错里的那个名字。如果它和插件 `package.json` 的完整包名不一样（比如少了 `@scope/`），多半是客户端注册时 `id` 写成了短名，改成完整包名。\n2. 名字没问题，再查同一个客户端脚本是不是被执行了两次。\n3. 急着先进去干活：点一次「重启」；还崩，就选禁用第三方插件并重启，保底进入后再回头查原因。不要连续点重启，也不要重装应用。\n4. 以后加插件一次只加一个，每加一个冷启动一次。坏了就知道是哪个。",
+      "evidence": [
+        "报错原文：`client-modules: duplicate factory registration for \"<名字>\" (bundle executed twice without invalidate?)`",
+        "宿主代码：0.2.2-rc.1 的客户端模块表在同一个 id 第二次注册工厂时抛这个错。",
+        "本人实测：「发现好插件」作者 2026-11-09 遇到后，同一份配置点一次重启就起来了；2026-11-10 在另一个插件上又遇到，那次查到的原因是客户端注册用了不带 scope 的短 id。"
+      ],
+      "unverified": "「同一份配置重试经常能起来」只有 2026-11-09 那一次观察，没有复现过，也不清楚那次真正的原因。恢复框上按钮的准确文字没有对照当前版本的界面。所以第 3 步只当应急办法，第 1、2 步才是找原因。",
+      "notes": null
+    },
+    {
+      "id": "no-host-ui-packages",
+      "title": "不要 require 宿主的界面组件包，控件自己写，只共用主题变量",
+      "category": "客户端加载",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "想让插件界面和宿主长得一样，于是直接 `require('@deepseek-ai/dsh-client-ui-primitives')`，拿宿主的按钮、弹窗来用。",
+      "do": "不要把宿主的任何 Client 包当模块加载。这些包没有稳定承诺，升级时说变就变；组件一抛错，你的整个展位入口就空了，控制台会出现 `slot entry crashed in '<展位名>'`。\n\n想长得像宿主：照着宿主控件的结构和样式自己写一份，类名加上自己插件的前缀，颜色只引用 `--dsw-alias-*` 变量，并保留用户已经习惯的行为（弹窗的焦点和 Esc 关闭、开关的 `role=\"switch\"`）。\n\n清单的 `dsh.client.inject` 里列宿主包名没有问题，那只是声明加载顺序。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的插件开发说明在界面一节明确不让 require 这个包或加载其他宿主 Client 包，理由是它们会不打招呼地变，而纯 JS 插件没有类型检查兜底。",
+        "经验做法：「发现好插件」内置清单里的原话是「不引用宿主内部 UI 包」。"
+      ],
+      "unverified": null,
+      "notes": "社区里有插件把这类包写进 `peerDependencies` 并且能运行。所以这条的意思不是「用了就装不上」，而是「宿主一升级就可能坏」。"
+    },
+    {
+      "id": "react-from-host",
+      "title": "React 用宿主提供的那一份，不要自己再打包一份",
+      "category": "客户端加载",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "写带界面的插件，习惯性地把 react、react-dom 装成依赖，一起打进客户端产物。",
+      "do": "在客户端工厂函数里 `require('react')`，拿到的就是宿主的 React。不要装第二份、不要从 CDN 加载、不要去 `window` 上找全局变量。用打包工具时把 `react` 标成 external。\n\n确实需要宿主基线之外的运行时模块时，按官方说明在清单的 `dsh.client.external` 里声明。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的创造说明写明，React 来自浏览器端的模块表，不需要重复安装、CDN 脚本或 UMD 查找。",
+        "公开仓库：社区插件 dsh-media-desk 2.6.2 的 `package.json` 没有任何运行时依赖，构建脚本把 `react` 设为 external，留给宿主提供。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "first-open-not-blank",
+      "title": "第一次打开给示例数据或明确的下一步，不要给一张白屏",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "插件装好第一次点开，数据还是空的。页面只有一个标题和一个「新建」按钮，或者干脆空白。用户不知道这东西用起来是什么样，也就不会去用。",
+      "do": "首屏放一份完整的示例数据，让人一眼看到用起来的样子；至少让空状态告诉用户下一步能做什么。\n\n加载中、出错、窄窗口这几种状态也各自要有版式，不要只做「有数据」这一种。",
+      "evidence": [
+        "公开仓库：社区插件 dsh-media-desk 2.6.2 有一个单独的 `src/seed.js`（333 行）准备示例数据，存储层初始化时用它生成初始内容。",
+        "经验做法：2026-11-10 拆解四个社区插件后的总结。拆解只读了代码，没有统计过示例数据对留存的影响。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "main-root-container-layout",
+      "title": "main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0",
+      "category": "界面与体验",
+      "status": "待复核",
+      "host_version": "未记录",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "给注册到 `main` 展位的页面写最外层容器，想让它撑满整个区域，用了 `position: absolute; inset: 0`。",
+      "do": "```css\n.my-plugin-root { flex: 1 1 0; height: 100%; min-height: 0; }\n```\n\n绝对定位铺满会盖住左侧栏。用户点不到侧栏，就回不去别的页面了。",
+      "evidence": [
+        "经验做法：「发现好插件」内置清单。没有留下当时的截图、插件名或宿主版本。"
+      ],
+      "unverified": "整条都没有重新验证：不知道是在哪个宿主版本上遇到的，这次也没有在 0.2.2-rc.1 上复现。用之前请自己试一下。试过了，欢迎来改这条的状态和版本。",
+      "notes": null
+    },
+    {
+      "id": "no-chat-input-in-main-panel",
+      "title": "不要在独立面板（main）里自己画聊天输入框，对话挂到会话视图上",
+      "category": "界面与体验",
+      "status": "待复核",
+      "host_version": "未记录",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "做一个有自己页面的插件（注册到 `main` 展位），想在页面里放一个输入框，让用户在这里和模型对话。",
+      "do": "独立面板里自己画的输入框拿不到宿主输入框的能力（`inputActions`），也不会自动带上多轮上下文。做出来的东西看着像聊天，其实每一句都是从头开始。\n\n对话优先挂到会话视图的展位（`conversation.view` 一带），或者嵌入宿主原生的会话组件。自己的页面只负责展示和整理结果。",
+      "evidence": [
+        "经验做法：「发现好插件」内置清单，来自作者做多个插件时的记录，没有留下当时的版本。",
+        "宿主代码：0.2.2-rc.1 里 `main` 和 `conversation.view` 两个展位都存在；`inputActions` 是会话界面服务随会话绑定提供的标准 prop。"
+      ],
+      "unverified": "「注册到 `main` 的面板拿不到 `inputActions`、没有多轮记忆」是作者的经验。这次只核对到 `inputActions` 由会话层提供，没有在宿主里实际注册一个 main 面板去试拿不拿得到。动手前请用 `cordis_inspect_query` 查一下 `main` 展位在你这个版本上给了哪些 props。",
+      "notes": null
+    },
+    {
+      "id": "one-feedback-layer",
+      "title": "提示、撤销、报错全站只做一套",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "每个页面各写各的成功提示和报错样式：有的弹框，有的行内红字，有的什么都不显示。用户做完一个操作，不确定成没成。",
+      "do": "做一个全站共用的反馈入口，比如一个 `toast(文字, {undo, error})` 函数。所有操作的成功、失败、能不能撤销，都从这里出。\n\n操作失败时把原因显示出来，不要吞掉。",
+      "evidence": [
+        "公开仓库：社区插件 dsh-media-desk 2.6.2 的 `client/desk.js` 里，`toast()`、`undo()` 和错误提示与界面状态放在同一个文件；各页面的操作统一经 `dispatchOps()` 发出，成功给回执，失败弹错误。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "one-state-store",
+      "title": "界面状态收在一个地方，改动都走同一个口子",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "界面一复杂，每个组件各自存一点状态，同一份数据在三处各有一个副本。改了一处，另外两处没跟上，出现「列表更新了、角标没更新」这类毛病。",
+      "do": "整个插件前端只留一个状态对象、一个修改函数。组件用 `useSyncExternalStore` 订阅自己要的那一小片，自己不藏业务状态。",
+      "evidence": [
+        "公开仓库：社区插件 dsh-media-desk 2.6.2 的 `client/desk.js`（355 行）就是这个结构：一个 `snapshot` 对象、一个 `setDesk()`、一个基于 `React.useSyncExternalStore` 的选择器。"
+      ],
+      "unverified": null,
+      "notes": "这条说的是纯界面状态。从会话内容推导出来的状态，官方说明另有要求：放在宿主侧的会话投影里算好再送到界面，界面不自己重放会话事件。"
+    },
+    {
+      "id": "status-needs-text",
+      "title": "表示状态不要只靠颜色，每个状态都带文字",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」作者的创造经验记录",
+      "superseded_by": null,
+      "when": "做进度条、状态灯、标签这类东西，用几种颜色区分阶段，自己觉得一看就懂。",
+      "do": "每个状态配上文字，颜色只做加强。\n\n一个新的状态指示第一次出现时，用一两句话说清三件事：这是什么、要不要用户做什么、会不会打扰。",
+      "evidence": [
+        "本人实测：「发现好插件」作者 2026-11-09 做过一个进度条，一度只剩五段不同颜色的短条，用户连着两次说看不懂。之后改成每个阶段带文字。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "theme-tokens-only",
+      "title": "颜色只用宿主的 --dsw-alias-* 变量，深色浅色都要看",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "给插件界面配色，直接写了 `#fff`、`rgba(...)` 这样的固定色值，或者自己定了一套渐变。在你开发时用的那个主题下很好看，用户一切到另一个主题，字就看不清了。",
+      "do": "背景、文字、边框、强调色全部引用宿主的 `--dsw-alias-*` 主题变量。有哪些变量，用 `cordis_inspect_query` 查 Theme。固定色值只留给插画、图标这类本身就是作品的东西。\n\n写完在深色和浅色下各看一眼，最好和宿主自己的同类页面并排看。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的插件开发说明要求用 inspect 列出的主题变量写样式，固定色值只用于插画；并说明这是和宿主保持一致风险最低的办法，变量改名最多变丑，不会渲染失败。",
+        "本人实测：「发现好插件」作者 2026-11-10 回看自己的插件，一张卡片外层写死了深色渐变和浅色字，内层用的是主题底色；在浅色回退下，白底上的字几乎看不见。这是离线渲染真实组件看到的，没有在真实宿主的浅色模式下复现。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "check-light-dark-narrow",
+      "title": "交付前在深色、浅色、宽屏、窄屏下各看一遍",
+      "category": "看效果与排错",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "社区插件拆解（2026-11-10）",
+      "superseded_by": null,
+      "when": "只在自己平时用的那个主题和窗口宽度下看过，觉得没问题就交付了。",
+      "do": "交付前用真实渲染至少看四种组合：桌面宽度（1440 左右）和窄窗口，各自的深色和浅色。\n\n判断标准可以很朴素：这一屏单独截出来发给别人，拿不拿得出手。测试全过代替不了这一步。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的验证说明要求，页面或面板在明暗两套主题下、和宿主同类页面并排时都要读得清。",
+        "经验做法：2026-11-10 拆解四个社区插件后的总结，加上作者自己的插件在浅色下看不清字的教训（见 theme-tokens-only）。窄屏这一项是作者的做法，官方说明里没有提。"
+      ],
+      "unverified": null,
+      "notes": null
+    },
+    {
+      "id": "measure-real-render",
+      "title": "改样式先量真实组件的渲染结果，不要对着设计稿或截图猜",
+      "category": "看效果与排错",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」作者的创造经验记录",
+      "superseded_by": null,
+      "when": "界面看着挤、乱，想调间距、对齐、字号。常见做法是看一眼截图凭感觉改，或者在单独的设计稿 HTML 上调好了再搬回插件。",
+      "do": "- 先确认你看到的是真实组件加真实样式表渲染出来的东西。只按设计稿调，会漏掉正式样式里早就有的约束，比如某张卡片已经定过最小高度。\n- 用脚本量，不用眼睛估：每个块的左右边缘齐不齐、间距和字号在不在你定的刻度上、文字对比度够不够、有没有被裁切或挤压。\n- 开发时可以把真实视图组件和样式表渲染成 HTML，再用无头浏览器截图和测量。最后仍要在宿主里的真实页面上看一遍，离线渲染和设计稿截图都代替不了这一步。",
+      "evidence": [
+        "本人实测：「发现好插件」作者 2026-11-09 调一个首页时，四处挤压全是测量脚本一次查出来的。此前只按设计稿 HTML 调样式，漏掉了正式样式里一张卡片的最小高度限制，上线后版面是乱的。",
+        "官方说明：0.2.2-rc.1 内置的验证说明写明，模拟页面的截图不算对运行中插件的验证。"
+      ],
+      "unverified": null,
+      "notes": "官方说明同时提醒：在创造模式里没有浏览器控制能力时，不要为了截图去另起浏览器或自己造渲染器，如实说明视觉验证做不了即可。上面说的离线渲染，是你在自己开发环境里的辅助手段。"
+    },
+    {
+      "id": "restart-after-replacing-package",
+      "title": "换掉已装插件的代码后要彻底退出重开，打包版桌面的 Cmd+R 不是整页刷新",
+      "category": "看效果与排错",
+      "status": "有效",
+      "host_version": "0.2.2-rc.1",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "改了插件代码，重新装了一遍，界面上看还是老样子。于是怀疑代码没改对，又改一轮。其实跑的一直是旧代码。",
+      "do": "- 第一次装一个新插件：可能直接热加载生效。\n- 替换一个已经装着的同名插件（改了后台、加了工具、重装都算）：彻底退出 DSH 再打开，旧的 JavaScript 模块才会换成新的。\n- 不要因为界面上那个展位还在、id 没变，就认为跑的是新代码。\n- 打包版桌面上默认的 Cmd+R 只刷新支持刷新的右侧面板，不是整页重载，别拿它当看新界面的办法。\n- 给用户交代怎么看效果时，把该用的那一条明说出来。",
+      "evidence": [
+        "官方说明：0.2.2-rc.1 内置的插件管理说明写明，新装的包可以通过热加载激活，替换已装的包需要重启才能加载新一代模块；状态为 `restart-required` 表示改动还没生效。",
+        "本人实测：2026-11-09 在官方桌面版 0.2.2-rc.1 上核对，开发环境的整页刷新没有注册到打包版，默认 Cmd+R 只刷新支持刷新的右侧面板。"
+      ],
+      "unverified": null,
+      "notes": "「发现好插件」内置清单里原来写的是「只改了前端界面，按 Cmd+R 刷新」。这句话在打包版桌面 0.2.2-rc.1 上不成立，所以这里没有照收。它在开发环境或别的版本上成不成立，没有核对。"
+    },
+    {
+      "id": "stop-after-three-rounds",
+      "title": "同一个问题连改三轮没好就停，写个总结开新会话接着做",
+      "category": "看效果与排错",
+      "status": "有效",
+      "host_version": "与版本无关",
+      "verified": "2026-11-10",
+      "source": "「发现好插件」内置避坑清单",
+      "superseded_by": null,
+      "when": "一个报错改了又改，每一轮都觉得这次应该好了。上下文越来越长，模型开始在自己前几轮的错误假设上打转。",
+      "do": "同一个问题连续三轮没解决，就停下来写一段总结：试过什么、各自的结果、现在卡在哪。带着这段总结开一个新会话继续，不要在原来的长上下文里硬磨。",
+      "evidence": [
+        "经验做法：「发现好插件」作者连续做了多个插件之后写进内置清单的做法。这是做法建议，不是宿主规则，没有对照数据；「三轮」是经验数字，不是测出来的。"
+      ],
+      "unverified": null,
+      "notes": null
+    }
+  ]
+}
