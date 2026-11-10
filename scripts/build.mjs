@@ -2,6 +2,7 @@
 // 把 entries/ 下的全部条目汇成两个文件：
 //   lessons.json   给程序读（插件带快照时用这个）
 //   LESSONS.md     给人和模型读（可以整段贴进创造模式）
+//   QUICK.md       速查：一条一行，只有标题。让模型开工前先读这个，详情按需再读
 // 顺手做格式检查和几条安全检查。没有依赖，装了 Node 18 以上就能跑：
 //   node scripts/build.mjs          生成
 //   node scripts/build.mjs --check  只检查，生成物和条目对不上就报错（适合放进合并前检查）
@@ -127,7 +128,21 @@ const digest = [
   }),
 ].join('\n').replace(/\n+$/u, '\n');
 
-const outputs = [['lessons.json', json], ['LESSONS.md', digest]];
+const quick = [
+  '# DSH 插件经验速查',
+  '',
+  '<!-- 这个文件由 scripts/build.mjs 生成，不要手改。 -->',
+  '',
+  `做 DSH 插件前扫一眼：${live.length} 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。`,
+  '',
+  ...CATEGORIES.flatMap(category => {
+    const group = live.filter(entry => entry.category === category);
+    if (!group.length) return [];
+    return [`## ${category}`, '', ...group.map(entry => `- ［${entry.kind === '踩过的坑' ? '坑' : '好'}${entry.status === '待复核' ? '·待复核' : ''}］${entry.title}（entries/${entry.id}.md）`), ''];
+  }),
+].join('\n').replace(/\n+$/u, '\n');
+
+const outputs = [['lessons.json', json], ['LESSONS.md', digest], ['QUICK.md', quick]];
 if (process.argv.includes('--check')) {
   const stale = outputs.filter(([name, content]) => { try { return readFileSync(join(ROOT, name), 'utf8') !== content; } catch { return true; } });
   if (stale.length) { console.error(`这些生成物和条目对不上，跑一次 node scripts/build.mjs：${stale.map(([name]) => name).join('、')}`); process.exit(1); }
@@ -136,5 +151,5 @@ if (process.argv.includes('--check')) {
   for (const [name, content] of outputs) writeFileSync(join(ROOT, name), content);
   const count = status => entries.filter(entry => entry.status === status).length;
   const kind = name => entries.filter(entry => entry.kind === name).length;
-  console.log(`已生成 lessons.json 和 LESSONS.md：共 ${entries.length} 条（踩过的坑 ${kind('踩过的坑')}，好做法 ${kind('好做法')}；有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
+  console.log(`已生成 lessons.json、LESSONS.md 和 QUICK.md：共 ${entries.length} 条（踩过的坑 ${kind('踩过的坑')}，好做法 ${kind('好做法')}；有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
 }
