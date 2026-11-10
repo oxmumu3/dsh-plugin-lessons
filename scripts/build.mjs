@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 把 entries/ 下的全部条目汇成两个文件：
-//   pitfalls.json  给程序读（插件带快照时用这个）
-//   PITFALLS.md    给人和模型读（可以整段贴进创造模式）
+//   lessons.json   给程序读（插件带快照时用这个）
+//   LESSONS.md     给人和模型读（可以整段贴进创造模式）
 // 顺手做格式检查和几条安全检查。没有依赖，装了 Node 18 以上就能跑：
 //   node scripts/build.mjs          生成
 //   node scripts/build.mjs --check  只检查，生成物和条目对不上就报错（适合放进合并前检查）
@@ -127,7 +127,7 @@ const digest = [
   }),
 ].join('\n').replace(/\n+$/u, '\n');
 
-const outputs = [['pitfalls.json', json], ['PITFALLS.md', digest]];
+const outputs = [['lessons.json', json], ['LESSONS.md', digest]];
 if (process.argv.includes('--check')) {
   const stale = outputs.filter(([name, content]) => { try { return readFileSync(join(ROOT, name), 'utf8') !== content; } catch { return true; } });
   if (stale.length) { console.error(`这些生成物和条目对不上，跑一次 node scripts/build.mjs：${stale.map(([name]) => name).join('、')}`); process.exit(1); }
@@ -136,5 +136,5 @@ if (process.argv.includes('--check')) {
   for (const [name, content] of outputs) writeFileSync(join(ROOT, name), content);
   const count = status => entries.filter(entry => entry.status === status).length;
   const kind = name => entries.filter(entry => entry.kind === name).length;
-  console.log(`已生成 pitfalls.json 和 PITFALLS.md：共 ${entries.length} 条（踩过的坑 ${kind('踩过的坑')}，好做法 ${kind('好做法')}；有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
+  console.log(`已生成 lessons.json 和 LESSONS.md：共 ${entries.length} 条（踩过的坑 ${kind('踩过的坑')}，好做法 ${kind('好做法')}；有效 ${count('有效')}，待复核 ${count('待复核')}，已过期 ${count('已过期')}）。`);
 }
