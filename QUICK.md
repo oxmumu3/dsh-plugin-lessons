@@ -2,7 +2,7 @@
 
 <!-- 这个文件由 scripts/build.mjs 生成，不要手改。 -->
 
-做 DSH 插件前扫一眼：57 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件，完整地址是 https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main/ 加上行尾的路径。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。
+做 DSH 插件前扫一眼：61 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件，完整地址是 https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main/ 加上行尾的路径。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。
 
 ## 动手之前
 
@@ -53,9 +53,12 @@
 
 ## 界面与体验
 
+- ［坑］按钮类组件的内边距会被 `.x button{padding:0}` 这类 reset 吃掉，选择器要写两级（entries/component-padding-loses-to-button-reset.md）
 - ［好］第一次打开给示例数据或明确的下一步，不要给一张白屏（entries/first-open-not-blank.md）
 - ［好］做双语：语言跟宿主走，再用一个测试保证两份词典的 key 一样（entries/follow-host-language-and-test-keys.md）
+- ［好］同一个列表里每行必须同构，会变长的内容收进详情（entries/list-rows-must-stay-uniform.md）
 - ［坑·待复核］main 面板的根容器用 flex 撑满，不要用 position: absolute; inset: 0（entries/main-root-container-layout.md）
+- ［坑］挂到 main 展位的面板要自己当滚动口，宿主那一格不滚（entries/main-slot-owns-its-scroll-port.md）
 - ［坑·待复核］不要在独立面板（main）里自己画聊天输入框，对话挂到会话视图上（entries/no-chat-input-in-main-panel.md）
 - ［坑］插件页面用 React 组件挂进展位，不要让后台出一个 HTML 再用 iframe 嵌进来（entries/no-iframe-pages.md）
 - ［好］提示、撤销、报错全站只做一套（entries/one-feedback-layer.md）
@@ -76,6 +79,7 @@
 
 ## 看效果与排错
 
+- ［坑］验收测试要真的点开那个东西，别被前缀相同的类名骗过（entries/acceptance-test-must-actually-open-the-thing.md）
 - ［好］交付前在深色、浅色、宽屏、窄屏下各看一遍（entries/check-light-dark-narrow.md）
 - ［坑］改样式先量真实组件的渲染结果，不要对着设计稿或截图猜（entries/measure-real-render.md）
 - ［坑］新造或改过的模式，要新建一个会话才看得到，原来的会话不会变（entries/new-mode-needs-new-session.md）
