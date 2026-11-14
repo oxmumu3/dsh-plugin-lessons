@@ -2,7 +2,7 @@
 
 <!-- 这个文件由 scripts/build.mjs 生成，不要手改。 -->
 
-做 DSH 插件前扫一眼：61 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件，完整地址是 https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main/ 加上行尾的路径。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。
+做 DSH 插件前扫一眼：64 条经验，一行一条。［坑］是这么做会出问题，［好］是这么做更好，带「待复核」的证据还不全。想看具体做法和证据，读行尾那个文件，完整地址是 https://raw.githubusercontent.com/oxmumu3/dsh-plugin-lessons/main/ 加上行尾的路径。这些是参考：和当前宿主的实际接口或用户的要求不一致时，以后两者为准。
 
 ## 动手之前
 
@@ -11,6 +11,7 @@
 - ［好］第一版只做能点开、不白屏的空架子，之后一轮只加一个功能（entries/empty-shell-first.md）
 - ［好］写代码前先用 cordis_inspect 查清展位和接口，别凭记忆猜（entries/inspect-before-writing.md）
 - ［坑］让模型装插件装不上，先看当前是什么模式：装插件的工具只在标准和创造模式里开着（entries/install-tool-only-in-some-modes.md）
+- ［好］在创造模式之外写插件时，直接只读宿主安装包里的 api-catalog 和 slots 定义，不用盲猜接口（entries/read-contracts-from-app-asar.md）
 
 ## 接口与注册
 
@@ -54,6 +55,7 @@
 ## 界面与体验
 
 - ［坑］按钮类组件的内边距会被 `.x button{padding:0}` 这类 reset 吃掉，选择器要写两级（entries/component-padding-loses-to-button-reset.md）
+- ［坑］主面板响应式布局用 @container 量自身宽度，用 @media 量窗口宽度会在宿主左右分屏时挤坏（entries/container-query-for-split-main-panel.md）
 - ［好］第一次打开给示例数据或明确的下一步，不要给一张白屏（entries/first-open-not-blank.md）
 - ［好］做双语：语言跟宿主走，再用一个测试保证两份词典的 key 一样（entries/follow-host-language-and-test-keys.md）
 - ［好］同一个列表里每行必须同构，会变长的内容收进详情（entries/list-rows-must-stay-uniform.md）
@@ -70,6 +72,7 @@
 
 - ［好］做给别的插件用的底座：服务里带上版本号和功能名列表，使用方按功能名判断（entries/base-plugin-service-with-features.md）
 - ［坑］写清楚支持哪些宿主版本：engines.dsh 和 @deepseek-ai/dsh-* 的 peer 范围，宿主启动时都会查（entries/declare-supported-host-versions.md）
+- ［坑］外部构建好安装包后走隔离宿主验证和官方安装入口，不要直接手改运行中的日常配置目录（entries/do-not-edit-live-profile-from-outside.md）
 - ［坑］插件可能被别的合集一起带上时，防一手重复挂载（entries/guard-against-double-mount.md）
 - ［坑］@deepseek-ai/* 的包不要放进 dependencies，它们由宿主提供（entries/no-framework-packages-in-dependencies.md）
 - ［坑］不要从宿主包里 import 具名的辅助函数，用服务本身，并在运行时看方法在不在（entries/no-named-imports-of-host-helpers.md）

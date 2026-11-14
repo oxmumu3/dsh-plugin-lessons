@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "count": 61,
+  "count": 64,
   "kinds": [
     "踩过的坑",
     "好做法"
@@ -113,6 +113,25 @@
       ],
       "unverified": null,
       "notes": "公开文章说标准模式也装不了，和 0.2.2-rc.1 的内置说明对不上。文章没写它用的宿主版本，可能是版本不同。这条按内置说明写；你那里不一样的话，以实际为准，也欢迎来改。"
+    },
+    {
+      "id": "read-contracts-from-app-asar",
+      "title": "在创造模式之外写插件时，直接只读宿主安装包里的 api-catalog 和 slots 定义，不用盲猜接口",
+      "kind": "好做法",
+      "category": "动手之前",
+      "status": "有效",
+      "host_version": "0.2.2-rc.3",
+      "verified": "2026-11-14",
+      "source": "牛村木木山拆解桌面版安装包与外部开发工作流时",
+      "superseded_by": null,
+      "when": "用外部编辑器或外部智能体写 DSH 插件时，手头没有创造模式里的 `cordis_inspect` 工具。遇到宿主刚升级（比如新增客户端展位或服务签名调整），容易以为外部拿不到最新契约，只能盲写，或者每写一步都切回创造模式问一次。",
+      "do": "桌面版宿主安装包自带的 `app.asar` 里直接装着完整的明文静态契约，只读解析文件头索引即可按路径读取，不需要解包或改动宿主文件：\n\n- **服务端接口、事件、配置与主题目录**：`dsh-tool-cordis/src/api-catalog.ts`\n- **全部客户端展位名与传入 props 类型**：各个 `dsh-client-ui-*/src/client/contract/slots.ts` 及同目录下的 `README.zh.md`\n\n静态接口和展位定义直接在安装包里核对；只有需要确认「当前正在运行的宿主进程里实际挂载了哪些实例、启用了哪些工具或动态注册项」时，再回创造模式调 `cordis_inspect`。",
+      "evidence": [
+        "宿主代码：0.2.2-rc.3 桌面版安装包的 `app.asar` 内含未压缩混淆的 `dsh-tool-cordis/src/api-catalog.ts`（约 792KB），以及 20 个 `dsh-client-ui-*` 包下的 `src/client/contract/slots.ts` 与 `README.zh.md`，包含该版本新增的 `sidebar.session.action`、`workspace.picker`、`workspace.picker.directoryFlow` 三个展位定义。",
+        "宿主代码：同版本 `cordis_inspect` 工具内置的接口与说明查询，底层读取的正是同一份 `api-catalog`，只有实时挂载树来自运行中宿主进程内存。"
+      ],
+      "unverified": null,
+      "notes": "相关条目：inspect-before-writing（在创造模式内开发时的查询方式）。"
     },
     {
       "id": "bundled-undici-global-dispatcher",
@@ -696,6 +715,25 @@
       "notes": null
     },
     {
+      "id": "container-query-for-split-main-panel",
+      "title": "主面板响应式布局用 @container 量自身宽度，用 @media 量窗口宽度会在宿主左右分屏时挤坏",
+      "kind": "踩过的坑",
+      "category": "界面与体验",
+      "status": "有效",
+      "host_version": "0.2.2-rc.3",
+      "verified": "2026-11-14",
+      "source": "牛村木木山做 dsh-superagent 主面板分屏适配时",
+      "superseded_by": null,
+      "when": "挂在 `main` 展位的插件面板写了 `@media (max-width: 720px)` 做窄屏折行。单独把整个桌面窗口拉窄时看着正常，但用户在宽屏显示器上开启宿主左右分屏（左边看对话、右边开插件面板）时，多列卡片、筛选条或横向表单没有折行，输入框甚至被挤成一条细缝。",
+      "do": "宿主开启左右分屏时，整个窗口宽度仍然是 1440px 甚至更宽，`@media` 根本不会触发，而插件所在的 `main` 展位实际只有 640px–700px 左右宽。\n\n把插件根容器声明为尺寸查询容器，内部多列网格和工具栏统一改用 `@container` 按面板自身可用宽度折行：\n\n```css\n.my-plugin-root {\n  container-type: inline-size;\n}\n\n@container (max-width: 760px) {\n  .my-plugin-grid {\n    grid-template-columns: 1fr;\n  }\n}\n```\n\n交付前除了看 1440px 全宽和 390px 窄窗口，还要专门看一眼 680px 左右的分屏宽度。",
+      "evidence": [
+        "本人实测：2026-11-14，在 1440px 窗口、680px 分屏宽度与 390px 窄屏下对照实测插件主面板，依赖窗口级断点的横向打回表单在分屏下将文本域挤压至 28px 宽；根容器加 `container-type: inline-size` 并改用 `@container` 后，三种宽度下均正常折行。",
+        "宿主代码：0.2.2-rc.3 桌面端支持主工作区多栏并列布局，单个 `main` 展位的实际渲染宽度独立于浏览器窗口总宽度。"
+      ],
+      "unverified": null,
+      "notes": "相关条目：check-light-dark-narrow（多尺寸双主题检查）、component-padding-loses-to-button-reset（根容器重置选择器的优先级问题；也可以在根重置上用 `:where(.my-plugin-root) button` 保持零特异性，避免吞掉组件类的内边距）。"
+    },
+    {
       "id": "first-open-not-blank",
       "title": "第一次打开给示例数据或明确的下一步，不要给一张白屏",
       "kind": "好做法",
@@ -938,6 +976,25 @@
       ],
       "unverified": null,
       "notes": "「禁用整行、没有弹窗、optional 不豁免」来自 DSH-better-sidebar 的注释，「每次启动都被跳过」来自 dshmarket 的注释，两个仓库说法一致；宿主代码里只核对到检查本身和 `engines.dsh`。"
+    },
+    {
+      "id": "do-not-edit-live-profile-from-outside",
+      "title": "外部构建好安装包后走隔离宿主验证和官方安装入口，不要直接手改运行中的日常配置目录",
+      "kind": "踩过的坑",
+      "category": "发版与兼容",
+      "status": "有效",
+      "host_version": "0.2.2-rc.3",
+      "verified": "2026-11-14",
+      "source": "牛村木木山在多会话并行升级自有插件时",
+      "superseded_by": null,
+      "when": "在外部编辑器里改插件，或者同时开多个会话并行升级不同插件时，为了图省事直接去改正在运行的宿主日常 profile 目录下的 `package.json`、`cordis.patch.yml`，或者直接覆盖已加载插件目录里的构建产物，又或者让多个会话共用同一个宿主数据目录跑测试。",
+      "do": "正在运行的桌面宿主在内存里持有插件实例、连接状态和首次启动时的客户端资源清单。外部绕过宿主直接改动日常配置目录，容易和内存里的状态打架，或者在重载界面时因为旧资源 404 白屏；多会话并发改同一份配置还会互相覆盖。\n\n把开发验证和日常装机拆成两步：\n\n1. **外部隔离验证**：每个会话在各自独立的代码目录（或 `git worktree`）里构建，用独立的临时目录传给环境变量 `DSH_HOME` 启动隔离宿主，验证冷启动、界面渲染与卸载，确认无误后打出 `.tgz` 安装包。\n2. **日常单点装机**：把验好的 `.tgz` 交给运行中宿主的 `plugin_manager`（或官方 CLI 离线安装命令）串行落盘，再按提示正常重启或用 `cordis_inspect` 核对挂载状态。",
+      "evidence": [
+        "本人实测：0.2.2-rc.1 桌面端在已装插件文件被外部热替换后触发整页重载，因宿主首次启动缓存的旧客户端资源路径返回 404，触发前端 `web boot` 启动失败。",
+        "宿主代码：0.2.2-rc.3 支持通过环境变量 `DSH_HOME` 指定独立的数据与配置目录，不触碰日常桌面实例即可跑完安装、启停与卸载全流程。"
+      ],
+      "unverified": null,
+      "notes": "相关条目：restart-after-replacing-package（替换已装插件后需要彻底退出重开）、test-the-built-package（发版前把打好的包挂进目标版本宿主实测）。"
     },
     {
       "id": "guard-against-double-mount",
